@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etsy Listing Optimizer</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="#" class="logo">Etsy Listing Optimizer</a>
+            <div class="nav-links">
+                <a href="index.html" class="active">Single Listing</a>
+                <a href="batch-grader.html">Batch Grader</a>
+            </div>
+            <div id="real-time-score" class="real-time-score">0.0/4.0 (Grade D)</div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <main>
+            <section class="input-section">
+                <h1>Optimize Your Etsy Listing</h1>
+                <p>Enter your listing details below for real-time optimization insights. The tool will analyze your content and suggest improvements for better search visibility.</p>
+                
+                <div class="grading-summary">
+                    <div class="individual-scores">
+                        <div class="component-score">
+                            <span class="component-score-label">Title</span>
+                            <span class="component-score-value title-score">0.0/4.0</span>
+                        </div>
+                        <div class="component-score">
+                            <span class="component-score-label">Tags</span>
+                            <span class="component-score-value tags-score">0.0/4.0</span>
+                        </div>
+                        <div class="component-score">
+                            <span class="component-score-label">Description</span>
+                            <span class="component-score-value description-score">0.0/4.0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="optimize-disabled-msg" class="optimize-disabled-message hidden">
+                    Your listing is already scoring well! Optimization is only available for listings scoring below 3.0.
+                </div>
+                
+                <form id="optimizer-form">
+                    <div>
+                        <label for="title">Product Title:</label>
+                        <textarea id="title" placeholder="Enter your product title here...">Vintage Persian Runner Boho Pink Rug Handmade, Geometric Tribal Oriental Turkish Carpet, Bohemian Wool Hallway Entry Decor Small Area Mat</textarea>
+                        <div class="help-tip">Character count: <span id="title-count">0</span>/140 (100-140 characters recommended)</div>
+                        <div class="feedback-message hidden" id="title-feedback"></div>
+                        <button type="button" id="title-only-btn" class="secondary-button">Optimize Title</button>
+                        <button type="button" id="title-grade-btn" class="secondary-button">Show Title Analysis</button>
+                    </div>
+                    
+                    <div>
+                        <label for="tags">Tags (max 13):</label>
+                        <div class="tags-input" id="tags-container">
+                            <input type="text" id="tag-input" placeholder="Type a tag and press Enter or paste comma-separated list...">
+                        </div>
+                        <div class="help-tip">Pro tip: Paste comma-separated tags (max 20 chars per tag, duplicates skipped)</div>
+                        <div class="tag-count"><span id="tag-count">0</span>/13 tags used</div>
+                        <div class="feedback-message hidden" id="tags-feedback"></div>
+                        <button type="button" id="tags-only-btn" class="secondary-button">Optimize Tags</button>
+                        <button type="button" id="tags-grade-btn" class="secondary-button">Show Tags Analysis</button>
+                    </div>
+                    
+                    <div>
+                        <label for="description">Product Description:</label>
+                        <textarea id="description" placeholder="Enter your product description here..."></textarea>
+                        <div class="feedback-message hidden" id="description-feedback"></div>
+                        <button type="button" id="description-only-btn" class="secondary-button">Optimize Description</button>
+                        <button type="button" id="description-grade-btn" class="secondary-button">Show Description Analysis</button>
+                    </div>
+                    
+                    <div class="error-message hidden" id="error-display"></div>
+                    
+                    <button type="submit" class="button">Analyze & Optimize All</button>
+                    <button type="button" id="grade-all-btn" class="button green">View Complete Analysis</button>
+                </form>
+            </section>
+            
+            <section class="results-section hidden" id="results">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div class="score-cards">
+                    <div class="card">
+                        <h2>Listing Analysis</h2>
+                        
+                        <div class="score grade-b">
+                            <div class="score-label">Overall Grade</div>
+                            <div class="score-value" id="overall-grade">3.0/4.0 (B)</div>
+                        </div>
+                        
+                        <div class="score-card">
+                            <div class="score-label">Title Score</div>
+                            <div class="score-value title-score">2.8/4.0</div>
+                            <div class="score-details" id="title-details">
+                                <div>✓ Character Count: 1.2/1.2</div>
+                                <div>✗ Focus Keywords: 0/1.2</div>
+                                <div>✓ Keyword Stuffing: 0.8/0.8</div>
+                                <div>✓ Structure: 0.8/0.8</div>
+                            </div>
+                        </div>
+                        
+                        <div class="score-card">
+                            <div class="score-label">Tags Score</div>
+                            <div class="score-value tags-score">3.0/4.0</div>
+                            <div class="score-details" id="tags-details">
+                                <div>✓ Tag Count: 1.0/1.0</div>
+                                <div>✓ Multi-word Tags: 1.0/1.0</div>
+                                <div>✗ Chain Structure: 0.5/1.0</div>
+                                <div>✓ Diversity: 0.5/1.0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="score-card">
+                            <div class="score-label">Description Score</div>
+                            <div class="score-value description-score">3.2/4.0</div>
+                            <div class="score-details" id="description-details">
+                                <div>✓ Length: 1.2/1.2</div>
+                                <div>✓ Formatting: 0.8/0.8</div>
+                                <div>✓ Keyword Integration: 1.2/1.6</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="improvements">
+                    <div class="card">
+                        <h2>Optimization Suggestions</h2>
+                        
+                        <h3>Title</h3>
+                        <div class="compare-fields">
+                            <div class="field-column">
+                                <span class="field-label">Original Title</span>
+                                <div class="field-content" id="original-title">Vintage Persian Runner Boho Pink Rug Handmade, Geometric Tribal Oriental Turkish Carpet, Bohemian Wool Hallway Entry Decor Small Area Mat</div>
+                            </div>
+                            <div class="field-column">
+                                <span class="field-label">Improved Title</span>
+                                <div class="field-content" id="improved-title">Vintage Persian Runner Boho Pink Rug Handmade | Geometric Tribal Oriental Turkish Carpet | Bohemian Wool Hallway Entry Decor Small Area Mat</div>
+                                <a class="use-improved" id="use-title">Use this improved title</a>
+                            </div>
+                        </div>
+                        <div class="improvement-note">Changed commas to pipes (|) for better visual separation and improved readability.</div>
+                        
+                        <h3>Tags</h3>
+                        <div class="compare-fields">
+                            <div class="field-column">
+                                <span class="field-label">Original Tags</span>
+                                <div class="field-content" id="original-tags">No tags provided</div>
+                            </div>
+                            <div class="field-column">
+                                <span class="field-label">Improved Tags</span>
+                                <div class="field-content" id="improved-tags">vintage persian rug, boho pink rug, handmade carpet, geometric tribal rug, oriental turkish carpet, bohemian wool rug, hallway runner, small area mat, entry decor, wool decor, geometric carpet, tribal design, vintage decor</div>
+                                <a class="use-improved" id="use-tags">Use these improved tags</a>
+                            </div>
+                        </div>
+                        <div class="improvement-note">Created multi-word tags with better chain structure and increased specificity. All 13 tag slots utilized with proper keyword chaining.</div>
+                        
+                        <h3>Description</h3>
+                        <div class="compare-fields">
+                            <div class="field-column">
+                                <span class="field-label">Original Description</span>
+                                <div class="field-content" id="original-description">No description provided</div>
+                            </div>
+                            <div class="field-column">
+                                <span class="field-label">Improved Description</span>
+                                <div class="field-content" id="improved-description">This beautiful vintage Persian runner is a handmade masterpiece that adds bohemian charm to any space. The pink hues create a warm, inviting atmosphere in your home.
+
+**Features:**
+* Authentic handcrafted Persian runner with geometric tribal patterns
+* Vibrant pink color with bohemian aesthetic
+* Made from 100% natural wool for durability and warmth
+* Perfect size for hallways, entryways, or as an accent piece
+* Unique Oriental Turkish carpet design with rich cultural heritage
+* Each rug is handmade, ensuring a one-of-a-kind addition to your home
+
+**Dimensions:** [Add your specific dimensions here]
+
+**Care Instructions:**
+* Vacuum regularly on low setting without beater bar
+* For spills, blot immediately with clean white cloth
+* Professional cleaning recommended for deep cleaning
+* Rotate periodically to ensure even wear
+
+**Perfect for:** Adding a touch of elegance to your hallway, entry, or any space needing a pop of color and artistic flair. These vintage-inspired rugs make excellent gifts for new homeowners, boho decor enthusiasts, or anyone appreciating handcrafted textiles.
+
+*Note: Due to the handmade nature of this product, slight variations in color and pattern may occur, making each piece uniquely yours.*</div>
+                                <a class="use-improved" id="use-description">Use this improved description</a>
+                            </div>
+                        </div>
+                        <div class="improvement-note">Created a comprehensive description with optimal length, proper formatting (paragraphs, bullet points), and keyword integration from the title.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Load main application code -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
