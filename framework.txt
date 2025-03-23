@@ -1,99 +1,83 @@
-# Etsy Listing Optimization Score Framework
+Complete Etsy Scoring Framework + Criteria 
+combined fields
+Overall Grade Calculation
+Overall score = (Title score × 0.40) + (Tag score × 0.40) + (Description score × 0.20)
+Scoring Scale:
+4: 3.5–4.0 (A-equivalent)
+3: 2.5–3.49 (B-equivalent)
+2: 1.5–2.49 (C-equivalent) 
+1: Below 1.5 (D/F-equivalent)
+Title Scoring (1-4 points)
+Character Count (1.2 points)
+Definition: Total number of characters in the title
+Scoring:
+70-140 characters: 1.2  points
+50-69 characters: 0.6 points
+<50 or >140 characters: 0.3 points
+Focus keywords in first 40 Characters (1.2 points)
+Definition: Each tag keyword found in the first 60 characters
+Scoring: 0.3 points per tag (up to 1.2 points)
+Keyword Redundancy (0.8 points)
+Definition: Abnormal repetition of words or phrases
+Scoring:
+No words repeated more than twice (0.8 points)
+Any word repeated 3+ times results in 0 points for this category
+This is an all-or-nothing score with no partial credit
+Structural Elements (0.8 points)
+Definition: Use of commas as separators
+Scoring:
+2-6 commas: 0.8 points
+1 comma: 0.4 points
+6+ commas or 0 commas: 0.2 points
 
-This document outlines the scoring criteria used in the Etsy Listing Score Tester, which evaluates product listings based on three main categories: Title, Tags, and Description. Each category has a maximum score of 4 points.
+Tag Scoring (1-4 points)
+Tag Count (1.0 point)
+Definition: Total number of tags used
+Scoring: (Number of tags / 13) × 1
+Multi-word Tag Ratio (1.0 point)
+Definition: Percentage of tags containing multiple words (separated by spaces)
+Score = ratio of multi-word tags to total tags
+Higher percentage of multi-word tags receives better scores
+Scoring: (Number of multi-word tags / Total tags)
+Tag Quality (1.0 point)
+Low quality tags: less than 10 characters AND fewer than 3 words
+No low quality tags (1.0 point)
+Any low quality tags (0.0 points)
+This is an all-or-nothing score with no partial credit
 
-## Overall Score Calculation
-- Title: 40% of total score
-- Tags: 40% of total score
-- Description: 20% of total score
 
-Grades are assigned as follows:
-- A: 3.5 to 4.0
-- B: 2.5 to 3.4
-- C: 1.5 to 2.4
-- D: Below 1.5
+Tag Diversity (1.0 point)
+Definition: Measures unique words across all tags
+Scoring:
+≥0.8 (80%) ratio: 1.0 point
+0.6-0.79 (60-79%) ratio: 0.75 points
+0.4-0.59 (40-59%) ratio: 0.5 points
+<0.4 ratio (less than 40%): 0.25 points
+`
+Description Scoring (1-4)
+On Etsy, product descriptions can be up to 102,400 characters, but the first 160 characters are most visible, so prioritize keywords there.
+Length and Detail (1.2 points)
+Definition: Total word count in description
+Scoring:
+160+ characters
+100-159 words: 0.9 points
+50-99 words: 0.6 points
+<50 
+Structural Formatting (1.2 points)
+Definition: Use of formatting elements for readability
+Presence of bulleted or numbered lists (•, *, -, 1.)
+This is an all or nothing score; full points if list elements are present, zero if not
 
-## Interdependence of Scoring Elements
 
-While each category is scored separately, several scoring components depend on the relationship between different elements:
+Keyword Integration (1.6 points)
+Definition: Inclusion of keywords from title in description
+Scoring: (total count keyword found in description / total count of keywords in title) × 1.6
+Higher % of title keywords appearing in description gets better score
 
-1. **Title and Tags Connection:**
-   - Focus Keywords (part of the Title score) are tags that appear in the first 60 characters of the title
-   - Without tags, a title cannot earn focus keyword points (up to 1.2 points lost)
-   - Tags must be entered before analyzing to get an accurate title score
 
-2. **Description and Title Connection:**
-   - Keyword Integration (part of the Description score) measures title keywords in the description
-   - Without a title, a description cannot earn keyword integration points (up to 1.6 points lost)
-   - Title must be entered before analyzing to get an accurate description score
 
-3. **Practical Implications:**
-   - Enter all three elements (title, tags, description) before analyzing for accurate scores
-   - Optimize elements together rather than in isolation
-   - This interdependence reflects how Etsy's actual search algorithm evaluates listings
-   - Consistency in keyword usage across all elements is rewarded
 
-## Title Scoring (4 points max)
 
-### 1. Character Count (1.2 points)
-- Optimal (1.2 points): 70-140 characters
-- Acceptable (0.6 points): 50-69 characters
-- Poor (0.3 points): Less than 50 or more than 140 characters
 
-### 2. Focus Keywords in First 60 Characters (1.2 points)
-- Each tag keyword found in the first 60 characters: 0.3 points (up to 1.2 points)
-- First 60 characters are critical for search visibility
 
-### 3. Keyword Redundancy (0.8 points)
-- No words repeated more than twice (0.8 points)
-- Any word repeated 3+ times results in 0 points for this category
-- This is an all-or-nothing score with no partial credit
 
-### 4. Structural Elements - Commas (0.8 points)
-- Optimal (0.8 points): 2-6 commas to separate keywords
-- Acceptable (0.4 points): 1 comma
-- Poor (0.2 points): No commas or too many commas (6+)
-
-## Tags Scoring (4 points max)
-
-### 1. Tag Count (1.0 point)
-- Score is calculated as: (number of tags ÷ 13) × 1.0
-- Using all 13 available tags gives maximum points
-
-### 2. Multi-word Tag Ratio (1.0 point)
-- Score equals the ratio of multi-word tags to total tags
-- Higher percentage of multi-word tags receives better scores
-- Multi-word tags are more specific and targeted
-
-### 3. Tag Quality (1.0 point)
-- Low quality tags: less than 10 characters AND fewer than 3 words
-- No low quality tags (1.0 point)
-- Any low quality tags (0.0 points)
-- This is an all-or-nothing score with no partial credit
-
-### 4. Tag Diversity (1.0 point)
-- Measures unique words across all tags
-- Excellent (1.0 point): 80%+ unique words
-- Good (0.75 point): 60-79% unique words
-- Fair (0.5 point): 40-59% unique words
-- Poor (0.25 point): Less than 40% unique words
-
-## Description Scoring (4 points max)
-
-### 1. Length and Detail (1.2 points)
-- Optimal (1.2 points): 160+ characters
-- Good (0.9 points): 100-159 characters
-- Fair (0.6 points): 50-99 characters
-- Poor (0.3 points): Less than 50 characters
-
-### 2. Structural Formatting (1.2 points)
-- List elements (1.2 points): Presence of bulleted or numbered lists (•, *, -, 1.)
-- This is an all-or-nothing score: full points if list elements are present, zero if not
-- Paragraph breaks and text formatting are tracked but do not affect the score
-
-### 3. Keyword Integration (1.6 points)
-- Score calculated as: (keywords from title found in description ÷ total keywords in title) × 1.6
-- Higher percentage of title keywords appearing in description gets better score
-- Maximum of 1.6 points
-- Found keywords are highlighted in purple pills, missing keywords in gray pills
-- Only words with 3+ characters from title are considered as keywords
