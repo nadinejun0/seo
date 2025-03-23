@@ -177,14 +177,6 @@
             margin: 10px 0 0 0;
             padding: 10px;
         }
-        .copy-tags-btn {
-            background-color: #673AB7;
-            color: white;
-            width: 100px;
-            display: inline-block;
-            margin: 10px 0 0 10px;
-            padding: 10px;
-        }
         .sample-btn {
             background-color: #ddd;
             color: #333;
@@ -211,7 +203,6 @@
                 <input type="text" id="tagInput" placeholder="Add a tag or comma-separated tags...">
                 <button id="addTagBtn" class="add-tag-btn">Add Tag</button>
                 <button id="clearTagsBtn" class="clear-tags-btn">Clear All</button>
-                <button id="copyTagsBtn" class="copy-tags-btn">Copy as CSV</button>
             </div>
             
             <label for="descriptionInput"><strong>Description</strong></label>
@@ -254,7 +245,6 @@
             const tagArray = tagText.split(',').map(tag => tag.trim()).filter(tag => tag);
             
             let tagsAdded = 0;
-            let duplicatesFound = [];
             
             for (let tag of tagArray) {
                 // Validate tag length
@@ -269,16 +259,6 @@
                     break;
                 }
                 
-                // Check for duplicate tags (case insensitive)
-                const isDuplicate = tags.some(existingTag => 
-                    existingTag.toLowerCase() === tag.toLowerCase()
-                );
-                
-                if (isDuplicate) {
-                    duplicatesFound.push(tag);
-                    continue;
-                }
-                
                 tags.push(tag);
                 tagsAdded++;
             }
@@ -286,10 +266,6 @@
             if (tagsAdded > 0) {
                 renderTags();
                 tagInput.value = '';
-            }
-            
-            if (duplicatesFound.length > 0) {
-                alert(`Duplicate tag(s) not added: ${duplicatesFound.join(', ')}`);
             }
         }
         
@@ -322,38 +298,6 @@
         document.getElementById('clearTagsBtn').addEventListener('click', function() {
             tags.length = 0;
             renderTags();
-        });
-        
-        document.getElementById('copyTagsBtn').addEventListener('click', function() {
-            if (tags.length === 0) {
-                alert('No tags to copy.');
-                return;
-            }
-            
-            const csvTags = tags.join(', ');
-            
-            // Create a temporary textarea to copy the text
-            const textarea = document.createElement('textarea');
-            textarea.value = csvTags;
-            textarea.setAttribute('readonly', '');
-            textarea.style.position = 'absolute';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            
-            // Select and copy the text
-            textarea.select();
-            document.execCommand('copy');
-            
-            // Clean up
-            document.body.removeChild(textarea);
-            
-            // Visual feedback
-            const copyBtn = document.getElementById('copyTagsBtn');
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-            }, 2000);
         });
         
         tagInput.addEventListener('keypress', function(e) {
@@ -539,7 +483,7 @@ This modern pottery piece makes a wonderful housewarming gift or present for the
                     </div>
                     <div class="score-details">
                         <div class="score-item">
-                            <span>Length (${descriptionScore.charCount} characters / ${descriptionScore.wordCount} words)</span>
+                            <span>Length (${descriptionScore.wordCount} words)</span>
                             <span>${descriptionScore.lengthScore.toFixed(1)} / 1.2</span>
                         </div>
                         <div class="score-item">
@@ -549,24 +493,6 @@ This modern pottery piece makes a wonderful housewarming gift or present for the
                         <div class="score-item">
                             <span>Keyword Integration (${Math.round(descriptionScore.keywordRatio * 100)}%)</span>
                             <span>${descriptionScore.keywordScore.toFixed(1)} / 1.6</span>
-                        </div>
-                        <div class="score-item">
-                            <span>Found Keywords:</span>
-                            <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">
-                                ${descriptionScore.matchingKeywords.map(keyword => 
-                                    `<span class="highlight" style="font-size: 12px; margin: 2px;">${keyword}</span>`
-                                ).join('')}
-                            </span>
-                        </div>
-                        <div class="score-item">
-                            <span>Missing Keywords:</span>
-                            <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">
-                                ${descriptionScore.allKeywords
-                                    .filter(keyword => !descriptionScore.matchingKeywords.includes(keyword))
-                                    .map(keyword => 
-                                        `<span style="background-color: #ddd; color: #666; font-size: 12px; margin: 2px; padding: 2px 4px; border-radius: 3px;">${keyword}</span>`
-                                    ).join('')}
-                            </span>
                         </div>
                     </div>
                     ${descriptionScore.recommendations.length > 0 ? `
@@ -614,13 +540,8 @@ This modern pottery piece makes a wonderful housewarming gift or present for the
             }
             
             // 2. Focus Keywords in First 60 Characters (1.2 points)
-            // Remove commas before checking for focus keywords
-            const first60CharsLower = result.first60Chars.toLowerCase().replace(/,/g, '');
-            const focusKeywords = tags.filter(tag => {
-                // Also remove commas from tags when checking
-                const tagWithoutCommas = tag.toLowerCase().replace(/,/g, '');
-                return first60CharsLower.includes(tagWithoutCommas);
-            });
+            const first60CharsLower = result.first60Chars.toLowerCase();
+            const focusKeywords = tags.filter(tag => first60CharsLower.includes(tag.toLowerCase()));
             result.focusKeywords = focusKeywords.length;
             result.matchingKeywords = focusKeywords;
             result.focusKeywordScore = Math.min(focusKeywords.length * 0.3, 1.2);
@@ -743,7 +664,7 @@ This modern pottery piece makes a wonderful housewarming gift or present for the
             return result;
         }
         
-        // Calculate description score
+        // calculate descirtption score
         function calculateDescriptionScore(description, title) {
             const result = {
                 score: 0,
@@ -756,45 +677,47 @@ This modern pottery piece makes a wonderful housewarming gift or present for the
                 recommendations: []
             };
             
-            // 1. Length and Detail (1.2 points) - Now measuring in characters, not words
-            result.charCount = description.length;
-            result.wordCount = description.split(/\s+/).filter(Boolean).length; // Keep for display purposes
+            // 1. Length and Detail (1.2 points)
+            result.wordCount = description.split(/\s+/).filter(Boolean).length;
             
-            if (result.charCount >= 160) {
+            if (result.wordCount >= 150 && result.wordCount <= 600) {
                 result.lengthScore = 1.2;
-            } else if (result.charCount >= 100 && result.charCount < 160) {
+            } else if (result.wordCount >= 120 && result.wordCount < 150) {
                 result.lengthScore = 0.9;
-            } else if (result.charCount >= 50 && result.charCount < 100) {
+            } else if (result.wordCount >= 50 && result.wordCount < 120) {
                 result.lengthScore = 0.6;
             } else {
                 result.lengthScore = 0.3;
             }
             
             if (result.lengthScore < 0.9) {
-                result.recommendations.push("Aim for 160+ characters in your description");
+                result.recommendations.push("Aim for 150-500 words in your description");
             }
             
-            // 2. Structural Formatting (1.2 points) - Now only checking for list elements
-            // Still check for paragraph breaks and formatting (for display purposes only)
+            // 2. Structural Formatting (1.2 points)
+            // Check for paragraph breaks
             const paragraphs = description.split(/\n\s*\n/);
             result.formattingElements.hasParagraphBreaks = paragraphs.length > 2 && paragraphs.some(p => p.length < 300);
             
-            // Check for list elements - This is the only thing that affects the score
+            // Check for list elements
             result.formattingElements.hasListElements = /[•*\-]|(\d+\.)/.test(description);
             
-            // Check for formatting markers (for display purposes only)
+            // Check for formatting markers
             result.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(description);
             
-            // Only list elements affect the score now (full 1.2 points if present)
-            if (result.formattingElements.hasListElements) {
-                result.formattingScore = 1.2;
-            } else {
-                result.formattingScore = 0;
-            }
+            if (result.formattingElements.hasParagraphBreaks) result.formattingScore += 0.4;
+            if (result.formattingElements.hasListElements) result.formattingScore += 0.4;
+            if (result.formattingElements.hasFormatting) result.formattingScore += 0.4;
             
             if (result.formattingScore < 1.2) {
-                // If score is less than 1.2, it means we don't have list elements
-                result.recommendations.push("Add bullet points or numbered lists for better readability");
+                let formatTips = [];
+                if (!result.formattingElements.hasParagraphBreaks) formatTips.push("paragraph breaks");
+                if (!result.formattingElements.hasListElements) formatTips.push("bullet points");
+                if (!result.formattingElements.hasFormatting) formatTips.push("formatting (*, _, #)");
+                
+                if (formatTips.length > 0) {
+                    result.recommendations.push(`Add ${formatTips.join(', ')} for better readability`);
+                }
             }
             
             // 3. Keyword Integration (1.6 points)
@@ -803,8 +726,6 @@ This modern pottery piece makes a wonderful housewarming gift or present for the
             
             const keywordsFound = titleWords.filter(word => descriptionLower.includes(word));
             result.keywordRatio = titleWords.length > 0 ? keywordsFound.length / titleWords.length : 0;
-            result.matchingKeywords = keywordsFound; // Store matching keywords for display
-            result.allKeywords = titleWords; // Store all keywords for reference
             
             result.keywordScore = Math.min(result.keywordRatio * 1.6, 1.6);
             
