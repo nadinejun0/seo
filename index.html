@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etsy Listing Score Tester</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #222;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+            }
+            .input-section, .results-section {
+                width: 50%;
+            }
+        }
+        .input-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .results-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+        textarea {
+            min-height: 120px;
+        }
+        button {
+            background-color: #F56400;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #E05800;
+        }
+        .score-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .score-header h3 {
+            margin: 0;
+        }
+        .score-value {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+        }
+        .grade-A {
+            background-color: #4CAF50;
+        }
+        .grade-B {
+            background-color: #8BC34A;
+        }
+        .grade-C {
+            background-color: #FFC107;
+        }
+        .grade-D {
+            background-color: #F44336;
+        }
+        .score-details {
+            margin-top: 10px;
+        }
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .score-item:last-child {
+            border-bottom: none;
+        }
+        .recommendations {
+            background-color: #FFF8E1;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .highlight {
+            background-color: #9C27B0;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .highlighted-tag {
+            background-color: #9C27B0;
+            color: white;
+        }
+        .recommendations h4 {
+            margin-top: 0;
+            color: #795548;
+        }
+        .recommendations ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .tag {
+            background-color: #eee;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .tag button {
+            background: none;
+            border: none;
+            color: #999;
+            margin: 0 0 0 5px;
+            padding: 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #tagInput {
+            width: calc(100% - 220px);
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .add-tag-btn {
+            width: 100px;
+            display: inline-block;
+            margin: 0;
+            padding: 10px;
+        }
+        .clear-tags-btn {
+            background-color: #ddd;
+            color: #333;
+            width: 100px;
+            display: inline-block;
+            margin: 10px 0 0 0;
+            padding: 10px;
+        }
+        .copy-tags-btn {
+            background-color: #673AB7;
+            color: white;
+            width: 100px;
+            display: inline-block;
+            margin: 10px 0 0 10px;
+            padding: 10px;
+        }
+        .sample-btn {
+            background-color: #ddd;
+            color: #333;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Etsy Listing Score Tester</h1>
+    
+    <p>This tool analyzes your Etsy listing based on Etsy's actual scoring algorithms. Enter your listing details below to get a score between 1-4 and specific recommendations for improvement.</p>
+    
+    <div class="container">
+        <div class="input-section">
+            <h2>Enter Your Listing Details</h2>
+            
+            <label for="titleInput"><strong>Title</strong></label>
+            <textarea id="titleInput" placeholder="Enter your Etsy listing title..."></textarea>
+            
+            <label><strong>Tags</strong> (max 13)</label>
+            <div class="tag-container" id="tagContainer"></div>
+            
+            <div>
+                <input type="text" id="tagInput" placeholder="Add a tag or comma-separated tags...">
+                <button id="addTagBtn" class="add-tag-btn">Add Tag</button>
+                <button id="clearTagsBtn" class="clear-tags-btn">Clear All</button>
+                <button id="copyTagsBtn" class="copy-tags-btn">Copy as CSV</button>
+            </div>
+            
+            <label for="descriptionInput"><strong>Description</strong></label>
+            <textarea id="descriptionInput" rows="8" placeholder="Enter your Etsy listing description..."></textarea>
+            
+            <button id="analyzeBtn">Analyze Listing</button>
+            <button id="sampleBtn" class="sample-btn">Load Sample Data</button>
+        </div>
+        
+        <div class="results-section">
+            <h2>Analysis Results</h2>
+            <div id="resultsContainer">
+                <p>Enter your listing details and click "Analyze Listing" to see results.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global tags array
+        const tags = [];
+        
+        // DOM elements
+        const tagContainer = document.getElementById('tagContainer');
+        const tagInput = document.getElementById('tagInput');
+        const addTagBtn = document.getElementById('addTagBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const sampleBtn = document.getElementById('sampleBtn');
+        const titleInput = document.getElementById('titleInput');
+        const descriptionInput = document.getElementById('descriptionInput');
+        const resultsContainer = document.getElementById('resultsContainer');
+        
+        // Add tag function
+        function addTag() {
+            const tagInput = document.getElementById('tagInput');
+            const tagText = tagInput.value.trim();
+            
+            if (!tagText) return;
+            
+            // Handle comma-separated tags
+            const tagArray = tagText.split(',').map(tag => tag.trim()).filter(tag => tag);
+            
+            let tagsAdded = 0;
+            let duplicatesFound = [];
+            
+            for (let tag of tagArray) {
+                // Validate tag length
+                if (tag.length > 20) {
+                    alert(`Tag "${tag}" exceeds the 20 character limit and was not added.`);
+                    continue;
+                }
+                
+                // Check if we've reached the maximum
+                if (tags.length >= 13) {
+                    alert("Maximum of 13 tags reached.");
+                    break;
+                }
+                
+                // Check for duplicate tags (case insensitive)
+                const isDuplicate = tags.some(existingTag => 
+                    existingTag.toLowerCase() === tag.toLowerCase()
+                );
+                
+                if (isDuplicate) {
+                    duplicatesFound.push(tag);
+                    continue;
+                }
+                
+                tags.push(tag);
+                tagsAdded++;
+            }
+            
+            if (tagsAdded > 0) {
+                renderTags();
+                tagInput.value = '';
+            }
+            
+            if (duplicatesFound.length > 0) {
+                alert(`Duplicate tag(s) not added: ${duplicatesFound.join(', ')}`);
+            }
+        }
+        
+        // Render tags
+        function renderTags() {
+            tagContainer.innerHTML = '';
+            tags.forEach((tag, index) => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'tag';
+                
+                const tagText = document.createElement('span');
+                tagText.textContent = tag;
+                
+                const removeButton = document.createElement('button');
+                removeButton.textContent = '×';
+                removeButton.onclick = function() {
+                    tags.splice(index, 1);
+                    renderTags();
+                };
+                
+                tagElement.appendChild(tagText);
+                tagElement.appendChild(removeButton);
+                tagContainer.appendChild(tagElement);
+            });
+        }
+        
+        // Event listeners
+        addTagBtn.addEventListener('click', addTag);
+        
+        document.getElementById('clearTagsBtn').addEventListener('click', function() {
+            tags.length = 0;
+            renderTags();
+        });
+        
+        document.getElementById('copyTagsBtn').addEventListener('click', function() {
+            if (tags.length === 0) {
+                alert('No tags to copy.');
+                return;
+            }
+            
+            const csvTags = tags.join(', ');
+            
+            // Create a temporary textarea to copy the text
+            const textarea = document.createElement('textarea');
+            textarea.value = csvTags;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            
+            // Select and copy the text
+            textarea.select();
+            document.execCommand('copy');
+            
+            // Clean up
+            document.body.removeChild(textarea);
+            
+            // Visual feedback
+            const copyBtn = document.getElementById('copyTagsBtn');
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 2000);
+        });
+        
+        tagInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTag();
+                e.preventDefault();
+            }
+        });
+        
+        sampleBtn.addEventListener('click', function() {
+            titleInput.value = "Handmade Ceramic Mug, Coffee Cup, Modern Pottery, Unique Gift, Kitchen Decor, Housewarming Present, Tea Cup";
+            
+            // Clear and add new tags
+            tags.length = 0;
+            [
+                "handmade ceramic mug", 
+                "coffee cup", 
+                "modern pottery", 
+                "unique gift", 
+                "kitchen decor", 
+                "housewarming gift", 
+                "tea cup", 
+                "ceramic", 
+                "pottery", 
+                "mug", 
+                "gift", 
+                "cup", 
+                "drinkware"
+            ].forEach(tag => tags.push(tag));
+            
+            renderTags();
+            
+            descriptionInput.value = `This handmade ceramic mug is perfect for your morning coffee or afternoon tea. Each piece is handcrafted with care and attention to detail, making it a unique addition to your kitchen.
+
+• Made from high-quality stoneware clay
+• Microwave and dishwasher safe
+• Holds approximately 12oz
+• Dimensions: 3.5" tall x 3" diameter
+
+This modern pottery piece makes a wonderful housewarming gift or present for the coffee lover in your life. The minimalist design complements any kitchen decor style.`;
+        });
+        
+        analyzeBtn.addEventListener('click', function() {
+            const title = titleInput.value.trim();
+            const description = descriptionInput.value.trim();
+            
+            if (!title || !description || tags.length === 0) {
+                alert('Please fill in all fields and add at least one tag.');
+                return;
+            }
+            
+            // Call scoring function
+            analyzeEtsyListing();
+        });
+        
+        // Etsy Scoring System
+        function analyzeEtsyListing() {
+            const title = titleInput.value.trim();
+            const description = descriptionInput.value.trim();
+            
+            // Title scoring (4 points max)
+            const titleScore = calculateTitleScore(title);
+            
+            // Tags scoring (4 points max)
+            const tagScore = calculateTagsScore(tags);
+            
+            // Description scoring (4 points max)
+            const descriptionScore = calculateDescriptionScore(description, title);
+            
+            // Calculate overall score
+            const overallScore = (titleScore.score * 0.4) + (tagScore.score * 0.4) + (descriptionScore.score * 0.2);
+            
+            // Build HTML for results
+            let resultsHTML = `
+                <div class="score-card">
+                    <div class="score-header">
+                        <h3>Overall Score</h3>
+                        <span class="score-value grade-${getGrade(overallScore)}">${overallScore.toFixed(2)} (${getGrade(overallScore)})</span>
+                    </div>
+                </div>
+            `;
+            
+            // Title results
+            resultsHTML += `
+                <div class="score-card">
+                    <div class="score-header">
+                        <h3>Title</h3>
+                        <span class="score-value grade-${getGrade(titleScore.score)}">${titleScore.score.toFixed(2)} (${getGrade(titleScore.score)})</span>
+                    </div>
+                    <div class="score-details">
+                        <div class="score-item">
+                            <span>Character Count (${titleScore.charCount})</span>
+                            <span>${titleScore.charCountScore.toFixed(1)} / 1.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Focus Keywords (${titleScore.focusKeywords})</span>
+                            <span>${titleScore.focusKeywordScore.toFixed(1)} / 1.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Focus Keywords:</span>
+                            <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">
+                                ${titleScore.matchingKeywords.map(keyword => 
+                                    `<span class="highlight" style="font-size: 12px; margin: 2px;">${keyword}</span>`
+                                ).join('')}
+                            </span>
+                        </div>
+                        <div class="score-item">
+                            <span>Redundancy</span>
+                            <span>${titleScore.redundancyScore.toFixed(1)} / 0.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Commas (${titleScore.commas})</span>
+                            <span>${titleScore.commaScore.toFixed(1)} / 0.8</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <p>First 60 Characters (focus area):</p>
+                        <div style="margin-bottom: 15px;"><span class="highlight">${titleScore.first60Chars}</span>${title.substring(60)}</div>
+                    </div>
+                    ${titleScore.recommendations.length > 0 ? `
+                        <div class="recommendations">
+                            <h4>Recommendations</h4>
+                            <ul>
+                                ${titleScore.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Tags results
+            resultsHTML += `
+                <div class="score-card">
+                    <div class="score-header">
+                        <h3>Tags</h3>
+                        <span class="score-value grade-${getGrade(tagScore.score)}">${tagScore.score.toFixed(2)} (${getGrade(tagScore.score)})</span>
+                    </div>
+                    <div class="score-details">
+                        <div class="score-item">
+                            <span>Tag Count (${tagScore.tagCount}/13)</span>
+                            <span>${tagScore.tagCountScore.toFixed(1)} / 1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Multi-word Ratio (${(tagScore.multiWordRatio * 100).toFixed(0)}%)</span>
+                            <span>${tagScore.multiWordScore.toFixed(1)} / 1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Tag Quality</span>
+                            <span>${tagScore.qualityScore.toFixed(1)} / 1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Tag Diversity (${(tagScore.diversityRatio * 100).toFixed(0)}%)</span>
+                            <span>${tagScore.diversityScore.toFixed(1)} / 1.0</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <p>Tags (focus keywords in purple):</p>
+                        <div class="tag-container">
+                            ${tags.map(tag => {
+                                const isMatchingKeyword = titleScore.matchingKeywords.some(keyword => 
+                                    keyword.toLowerCase() === tag.toLowerCase());
+                                return `<div class="tag ${isMatchingKeyword ? 'highlighted-tag' : ''}">${tag}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                    ${tagScore.recommendations.length > 0 ? `
+                        <div class="recommendations">
+                            <h4>Recommendations</h4>
+                            <ul>
+                                ${tagScore.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Description results
+            resultsHTML += `
+                <div class="score-card">
+                    <div class="score-header">
+                        <h3>Description</h3>
+                        <span class="score-value grade-${getGrade(descriptionScore.score)}">${descriptionScore.score.toFixed(2)} (${getGrade(descriptionScore.score)})</span>
+                    </div>
+                    <div class="score-details">
+                        <div class="score-item">
+                            <span>Length (${descriptionScore.charCount} characters / ${descriptionScore.wordCount} words)</span>
+                            <span>${descriptionScore.lengthScore.toFixed(1)} / 1.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Formatting</span>
+                            <span>${descriptionScore.formattingScore.toFixed(1)} / 1.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Keyword Integration (${Math.round(descriptionScore.keywordRatio * 100)}%)</span>
+                            <span>${descriptionScore.keywordScore.toFixed(1)} / 1.6</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Found Keywords:</span>
+                            <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">
+                                ${descriptionScore.matchingKeywords.map(keyword => 
+                                    `<span class="highlight" style="font-size: 12px; margin: 2px;">${keyword}</span>`
+                                ).join('')}
+                            </span>
+                        </div>
+                        <div class="score-item">
+                            <span>Missing Keywords:</span>
+                            <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">
+                                ${descriptionScore.allKeywords
+                                    .filter(keyword => !descriptionScore.matchingKeywords.includes(keyword))
+                                    .map(keyword => 
+                                        `<span style="background-color: #ddd; color: #666; font-size: 12px; margin: 2px; padding: 2px 4px; border-radius: 3px;">${keyword}</span>`
+                                    ).join('')}
+                            </span>
+                        </div>
+                    </div>
+                    ${descriptionScore.recommendations.length > 0 ? `
+                        <div class="recommendations">
+                            <h4>Recommendations</h4>
+                            <ul>
+                                ${descriptionScore.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = resultsHTML;
+        }
+        
+        // Calculate title score
+        function calculateTitleScore(title) {
+            const result = {
+                score: 0,
+                charCount: title.length,
+                charCountScore: 0,
+                focusKeywords: 0,
+                focusKeywordScore: 0,
+                repeatedWords: [],
+                redundancyScore: 0,
+                commas: 0,
+                commaScore: 0,
+                recommendations: [],
+                first60Chars: title.substring(0, 60),
+                matchingKeywords: []
+            };
+            
+            // 1. Character Count (1.2 points)
+            if (title.length >= 70 && title.length <= 140) {
+                result.charCountScore = 1.2;
+            } else if (title.length >= 50 && title.length < 70) {
+                result.charCountScore = 0.6;
+            } else {
+                result.charCountScore = 0.3;
+            }
+            
+            if (result.charCountScore < 1.2) {
+                result.recommendations.push("Aim for 70-140 characters in your title");
+            }
+            
+            // 2. Focus Keywords in First 60 Characters (1.2 points)
+            // Remove commas before checking for focus keywords
+            const first60CharsLower = result.first60Chars.toLowerCase().replace(/,/g, '');
+            const focusKeywords = tags.filter(tag => {
+                // Also remove commas from tags when checking
+                const tagWithoutCommas = tag.toLowerCase().replace(/,/g, '');
+                return first60CharsLower.includes(tagWithoutCommas);
+            });
+            result.focusKeywords = focusKeywords.length;
+            result.matchingKeywords = focusKeywords;
+            result.focusKeywordScore = Math.min(focusKeywords.length * 0.3, 1.2);
+            
+            if (result.focusKeywordScore < 0.3) {
+                result.recommendations.push("Include at least one tag keyword in the first 60 characters");
+            }
+            
+            // 3. Keyword Redundancy Detection (0.8 points)
+            const words = title.toLowerCase().match(/\b[a-zA-Z]{2,}\b/g) || [];
+            const wordFrequency = {};
+            words.forEach(word => {
+                wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+            });
+            
+            result.repeatedWords = Object.keys(wordFrequency)
+                .filter(word => wordFrequency[word] > 2)
+                .map(word => `${word} (${wordFrequency[word]})`);
+            
+            if (result.repeatedWords.length === 0) {
+                result.redundancyScore = 0.8;
+            }
+            
+            if (result.redundancyScore < 0.8) {
+                result.recommendations.push(`Reduce repetition of words: ${result.repeatedWords.join(', ')}`);
+            }
+            
+            // 4. Structural Elements - Commas (0.8 points)
+            result.commas = (title.match(/,/g) || []).length;
+            
+            if (result.commas >= 2 && result.commas <= 6) {
+                result.commaScore = 0.8;
+            } else if (result.commas === 1) {
+                result.commaScore = 0.4;
+            } else {
+                result.commaScore = 0.2;
+            }
+            
+            if (result.commaScore < 0.8) {
+                result.recommendations.push("Use 2-6 commas to separate keywords");
+            }
+            
+            result.score = result.charCountScore + result.focusKeywordScore + 
+                          result.redundancyScore + result.commaScore;
+            
+            return result;
+        }
+        
+        // Calculate tags score
+        function calculateTagsScore(tags) {
+            const result = {
+                score: 0,
+                tagCount: tags.length,
+                tagCountScore: 0,
+                multiWordRatio: 0,
+                multiWordScore: 0,
+                lowQualityTags: [],
+                qualityScore: 0,
+                diversityRatio: 0,
+                diversityScore: 0,
+                recommendations: []
+            };
+            
+            // 1. Tag Count (1 point)
+            result.tagCountScore = Math.min((tags.length / 13), 1);
+            
+            if (result.tagCountScore < 1) {
+                result.recommendations.push(`Use all 13 available tags (currently using ${tags.length})`);
+            }
+            
+            // 2. Multi-word Tag Ratio (1 point)
+            const multiWordTags = tags.filter(tag => tag.split(' ').length > 1);
+            result.multiWordRatio = tags.length > 0 ? multiWordTags.length / tags.length : 0;
+            result.multiWordScore = result.multiWordRatio;
+            
+            if (result.multiWordScore < 0.7) {
+                result.recommendations.push("Use more multi-word tags for better specificity");
+            }
+            
+            // 3. Tag Quality (1 point)
+            result.lowQualityTags = tags.filter(tag => tag.length < 10 && tag.split(' ').length < 3);
+            
+            if (result.lowQualityTags.length === 0) {
+                result.qualityScore = 1;
+            }
+            
+            if (result.qualityScore < 1) {
+                result.recommendations.push(`Improve low quality tags: ${result.lowQualityTags.join(', ')}`);
+            }
+            
+            // 4. Tag Diversity (1 point)
+            const uniqueWords = new Set();
+            let totalWords = 0;
+            
+            tags.forEach(tag => {
+                const words = tag.toLowerCase().split(' ');
+                totalWords += words.length;
+                words.forEach(word => uniqueWords.add(word));
+            });
+            
+            result.diversityRatio = totalWords > 0 ? uniqueWords.size / totalWords : 0;
+            
+            if (result.diversityRatio >= 0.8) {
+                result.diversityScore = 1;
+            } else if (result.diversityRatio >= 0.6) {
+                result.diversityScore = 0.75;
+            } else if (result.diversityRatio >= 0.4) {
+                result.diversityScore = 0.5;
+            } else {
+                result.diversityScore = 0.25;
+            }
+            
+            if (result.diversityScore < 0.75) {
+                result.recommendations.push("Use more diverse words across your tags");
+            }
+            
+            result.score = result.tagCountScore + result.multiWordScore + 
+                          result.qualityScore + result.diversityScore;
+            
+            return result;
+        }
+        
+        // Calculate description score
+        function calculateDescriptionScore(description, title) {
+            const result = {
+                score: 0,
+                wordCount: 0,
+                lengthScore: 0,
+                formattingElements: { hasParagraphBreaks: false, hasListElements: false, hasFormatting: false },
+                formattingScore: 0,
+                keywordRatio: 0,
+                keywordScore: 0,
+                recommendations: []
+            };
+            
+            // 1. Length and Detail (1.2 points) - Now measuring in characters, not words
+            result.charCount = description.length;
+            result.wordCount = description.split(/\s+/).filter(Boolean).length; // Keep for display purposes
+            
+            if (result.charCount >= 160) {
+                result.lengthScore = 1.2;
+            } else if (result.charCount >= 100 && result.charCount < 160) {
+                result.lengthScore = 0.9;
+            } else if (result.charCount >= 50 && result.charCount < 100) {
+                result.lengthScore = 0.6;
+            } else {
+                result.lengthScore = 0.3;
+            }
+            
+            if (result.lengthScore < 0.9) {
+                result.recommendations.push("Aim for 160+ characters in your description");
+            }
+            
+            // 2. Structural Formatting (1.2 points) - Now only checking for list elements
+            // Still check for paragraph breaks and formatting (for display purposes only)
+            const paragraphs = description.split(/\n\s*\n/);
+            result.formattingElements.hasParagraphBreaks = paragraphs.length > 2 && paragraphs.some(p => p.length < 300);
+            
+            // Check for list elements - This is the only thing that affects the score
+            result.formattingElements.hasListElements = /[•*\-]|(\d+\.)/.test(description);
+            
+            // Check for formatting markers (for display purposes only)
+            result.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(description);
+            
+            // Only list elements affect the score now (full 1.2 points if present)
+            if (result.formattingElements.hasListElements) {
+                result.formattingScore = 1.2;
+            } else {
+                result.formattingScore = 0;
+            }
+            
+            if (result.formattingScore < 1.2) {
+                // If score is less than 1.2, it means we don't have list elements
+                result.recommendations.push("Add bullet points or numbered lists for better readability");
+            }
+            
+            // 3. Keyword Integration (1.6 points)
+            const titleWords = title.toLowerCase().match(/\b[a-zA-Z]{3,}\b/g) || [];
+            const descriptionLower = description.toLowerCase();
+            
+            const keywordsFound = titleWords.filter(word => descriptionLower.includes(word));
+            result.keywordRatio = titleWords.length > 0 ? keywordsFound.length / titleWords.length : 0;
+            result.matchingKeywords = keywordsFound; // Store matching keywords for display
+            result.allKeywords = titleWords; // Store all keywords for reference
+            
+            result.keywordScore = Math.min(result.keywordRatio * 1.6, 1.6);
+            
+            if (result.keywordScore < 0.8) {
+                result.recommendations.push("Include more keywords from your title in your description");
+            }
+            
+            result.score = result.lengthScore + result.formattingScore + result.keywordScore;
+            
+            return result;
+        }
+        
+        // Helper function to get grade from score
+        function getGrade(score) {
+            if (score >= 3.5) return 'A';
+            if (score >= 2.5) return 'B';
+            if (score >= 1.5) return 'C';
+            return 'D';
+        }
+    </script>
+</body>
+</html>
