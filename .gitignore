@@ -2,3 +2,7 @@
 openai.env
 node_modules/
 .DS_Store
+old/
+claude.md
+repomix-output.txt
+index-copy.html

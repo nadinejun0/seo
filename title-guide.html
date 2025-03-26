@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etsy Title Optimization Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #222;
+        }
+        h1 {
+            padding-bottom: 10px;
+            border-bottom: 2px solid #F56400;
+        }
+        h2 {
+            margin-top: 30px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .highlight {
+            background-color: #FFF8E1;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .example {
+            background-color: #E8F5E9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .poor {
+            background-color: #FFEBEE;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .good {
+            background-color: #E8F5E9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .focus-area {
+            background-color: #E3F2FD;
+            padding: 3px;
+        }
+        .tip {
+            background-color: #E8EAF6;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .tip h3 {
+            margin-top: 0;
+            color: #3F51B5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+        .step {
+            margin-bottom: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tool-container {
+            background-color: #E1F5FE;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        .input-section textarea, .input-section input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            margin-top: 5px;
+        }
+        .input-section textarea {
+            min-height: 80px;
+        }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .tag {
+            background-color: #E8EAF6;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .tag button {
+            background: none;
+            border: none;
+            color: #999;
+            margin: 0 0 0 5px;
+            padding: 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button {
+            background-color: #F56400;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #E05800;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .results h3 {
+            margin-top: 0;
+        }
+        .title-result {
+            background-color: #E8F5E9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background-color: #ddd;
+            color: #333;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .copy-btn:hover {
+            background-color: #ccc;
+        }
+        .first-60 {
+            background-color: #E3F2FD;
+            padding: 2px;
+        }
+        .char-count {
+            color: #757575;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #fff;
+            font-weight: bold;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 0 4px 4px 4px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Etsy Title Optimization Tool</h1>
+    
+    <p>Create effective Etsy listing titles that maximize the number of focus keywords, especially within the first 60 characters, while maintaining clarity and natural phrasing.</p>
+
+    <!-- Interactive Title Optimization Tool -->
+    <div class="tool-container">
+        <h2>Title Optimizer</h2>
+        <p>Enter your tags and/or current title to get optimization suggestions:</p>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('input-tab', this)">Input</div>
+            <div class="tab" onclick="switchTab('results-tab', this)">Results</div>
+            <div class="tab" onclick="switchTab('guide-tab', this)">Guide</div>
+        </div>
+        
+        <div id="input-tab" class="tab-content active">
+            <div class="input-section">
+                <label for="currentTitle"><strong>Current Title</strong> (optional)</label>
+                <textarea id="currentTitle" placeholder="Enter your current Etsy listing title..."></textarea>
+                <div class="char-count"><span id="titleCharCount">0</span>/140 characters</div>
+            </div>
+            
+            <div class="input-section">
+                <label><strong>Tags</strong> (help us understand your important keywords)</label>
+                <div class="tag-container" id="tagContainer"></div>
+                
+                <div>
+                    <input type="text" id="tagInput" placeholder="Add a tag or comma-separated tags...">
+                    <button id="addTagBtn">Add Tag</button>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <label for="productDescription"><strong>Brief Product Description</strong> (optional)</label>
+                <textarea id="productDescription" placeholder="Briefly describe your product (materials, use, style, etc.)..."></textarea>
+            </div>
+            
+            <button id="optimizeBtn">Generate Optimized Titles</button>
+        </div>
+        
+        <div id="results-tab" class="tab-content">
+            <div class="results" id="resultsContainer">
+                <p>Enter your information and click "Generate Optimized Titles" to see suggestions.</p>
+            </div>
+        </div>
+        
+        <div id="guide-tab" class="tab-content">
+            <h3>Title Optimization Best Practices</h3>
+            <ul>
+                <li>Place your most important keywords in the first 60 characters</li>
+                <li>Use 2-6 separators (commas, pipes, or dashes) to divide keywords</li>
+                <li>Avoid repeating words more than twice</li>
+                <li>Keep your title length between 70-140 characters</li>
+                <li>Match keywords in your title with your tags</li>
+                <li>Use natural language that makes sense to shoppers</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="highlight">
+        <h3>Why the First 60 Characters Matter</h3>
+        <p>The first 60 characters of your title are the most important for several reasons:</p>
+        <ul>
+            <li>They appear in search results and browser tabs</li>
+            <li>Etsy's algorithm gives them more weight</li>
+            <li>Mobile devices show a truncated title</li>
+            <li>Shoppers scan the beginning of titles first</li>
+        </ul>
+    </div>
+
+    <h2>Step-by-Step Title Optimization Process</h2>
+    
+    <div class="step">
+        <h3>Step 1: Identify Your Primary Keywords</h3>
+        <p>Start by identifying 3-5 primary keywords that best describe your product. These should be words that potential customers are most likely to search for.</p>
+        
+        <div class="example">
+            <p><strong>Example Product:</strong> A handmade ceramic coffee mug with blue glaze</p>
+            <p><strong>Primary Keywords:</strong> ceramic mug, coffee cup, handmade pottery, blue mug, tea cup</p>
+        </div>
+    </div>
+    
+    <div class="step">
+        <h3>Step 2: Prioritize Your First 60 Characters</h3>
+        <p>Structure your title so that your most important 2-3 primary keywords appear within the first 60 characters.</p>
+        
+        <div class="example">
+            <p><strong>Poor Structure (important keywords after 60 chars):</strong></p>
+            <div class="poor">
+                <span class="focus-area">Beautiful Handcrafted Gift for Coffee Lovers - Perfect for Home</span> Decoration, Ceramic Coffee Mug, Blue Pottery, Tea Cup, Unique Present
+            </div>
+            
+            <p><strong>Better Structure (important keywords in first 60 chars):</strong></p>
+            <div class="good">
+                <span class="focus-area">Ceramic Coffee Mug, Handmade Blue Pottery, Tea Cup - Unique</span> Gift for Coffee Lovers, Home Decoration, Perfect Present
+            </div>
+        </div>
+    </div>
+    
+    <div class="step">
+        <h3>Step 3: Use Strategic Separators</h3>
+        <p>Use commas, pipes (|), or dashes to separate keywords. This helps Etsy's search algorithm interpret your title correctly and improves readability.</p>
+        
+        <table>
+            <tr>
+                <th>Separator</th>
+                <th>Example</th>
+                <th>Best Used For</th>
+            </tr>
+            <tr>
+                <td>Comma (,)</td>
+                <td>Ceramic Mug, Coffee Cup, Handmade</td>
+                <td>Primary separator - most recognized by search engines</td>
+            </tr>
+            <tr>
+                <td>Pipe (|)</td>
+                <td>Ceramic Mug | Coffee Cup | Handmade</td>
+                <td>Visually distinctive - helps for longer titles</td>
+            </tr>
+            <tr>
+                <td>Dash (-)</td>
+                <td>Ceramic Mug - Coffee Cup - Handmade</td>
+                <td>Connecting related concepts or variations</td>
+            </tr>
+        </table>
+        
+        <p><strong>Aim for 2-6 separators total in your title for optimal results.</strong></p>
+    </div>
+    
+    <div class="step">
+        <h3>Step 4: Avoid Redundancy</h3>
+        <p>Don't repeat the same word more than twice in your title. This wastes valuable character space and can hurt your SEO.</p>
+        
+        <div class="example">
+            <p><strong>Redundant:</strong></p>
+            <div class="poor">
+                Ceramic Coffee Mug, Coffee Cup, Coffee Lover Gift, Coffee Mug, Handmade Coffee Mug
+            </div>
+            
+            <p><strong>Improved:</strong></p>
+            <div class="good">
+                Ceramic Coffee Mug, Handmade Pottery Cup, Hot Beverage Holder, Glazed Drinkware, Tea Cup
+            </div>
+        </div>
+    </div>
+    
+    <div class="step">
+        <h3>Step 5: Balance Keywords with Readability</h3>
+        <p>While keywords are important, your title should still read naturally and make sense to shoppers.</p>
+        
+        <div class="example">
+            <p><strong>Keyword Stuffed:</strong></p>
+            <div class="poor">
+                Mug Cup Coffee Tea Ceramic Handmade Gift Blue Pottery Glazed Drinkware Present
+            </div>
+            
+            <p><strong>Balanced:</strong></p>
+            <div class="good">
+                Ceramic Coffee Mug, Handmade Blue Pottery, Tea Cup, Unique Glazed Drinkware Gift
+            </div>
+        </div>
+    </div>
+    
+    <h2>Title Templates That Work</h2>
+    
+    <p>These templates can help you structure effective titles for different types of products:</p>
+    
+    <div class="example">
+        <h3>For Physical Products:</h3>
+        <p><strong>[Primary Material] [Primary Product] [Key Attribute], [Style/Design] [Secondary Product], [Occasion/Use], [Recipient]</strong></p>
+        <p>Example: <em>Ceramic Coffee Mug, Handmade Blue Pottery, Kitchen Decor, Birthday Gift</em></p>
+    </div>
+    
+    <div class="example">
+        <h3>For Digital Products:</h3>
+        <p><strong>[Product Type] [Key Feature], [Format] [Secondary Feature], [Use Case], [Compatibility]</strong></p>
+        <p>Example: <em>Budget Planner Printable, Excel Spreadsheet Template, Financial Tracker, Google Sheets</em></p>
+    </div>
+    
+    <div class="example">
+        <h3>For Clothing/Accessories:</h3>
+        <p><strong>[Material] [Product], [Style/Design], [Occasion], [Season], [Size/Fit Description]</strong></p>
+        <p>Example: <em>Leather Wallet for Men, Minimalist Design, Anniversary Gift, Slim Bifold</em></p>
+    </div>
+    
+    <h2>Before & After Examples</h2>
+    
+    <table>
+        <tr>
+            <th>Product</th>
+            <th>Original Title</th>
+            <th>Optimized Title</th>
+        </tr>
+        <tr>
+            <td>Candle</td>
+            <td class="poor">Beautiful Handmade Soy Candle That Smells Amazing And Makes A Great Gift For Anyone Who Loves Home Decor And Nice Scents</td>
+            <td class="good">Soy Candle, Handmade Scented Candle, Home Decor, Aromatherapy Gift, Self Care Package</td>
+        </tr>
+        <tr>
+            <td>Earrings</td>
+            <td class="poor">Cute Gold Earrings That Are Perfect For Any Outfit And Will Make You Feel Beautiful Whenever You Wear Them</td>
+            <td class="good">Gold Dangle Earrings, Minimalist Jewelry, Statement Earrings, Gift for Her, Handmade Accessories</td>
+        </tr>
+        <tr>
+            <td>Print</td>
+            <td class="poor">Wall Art That Will Look Amazing In Your Home And Make Your Space Look Beautiful - Digital Download</td>
+            <td class="good">Mountain Landscape Print, Digital Wall Art, Nature Photography, Home Decor, Printable Poster</td>
+        </tr>
+    </table>
+    
+    <div class="tip">
+        <h3>Pro Tips</h3>
+        <ul>
+            <li>Use all 140 characters if possible, but prioritize the first 60</li>
+            <li>Include variations (mug/cup, necklace/pendant) to catch different search terms</li>
+            <li>Update your titles periodically based on seasonal trends</li>
+            <li>Match your title keywords with your tags for maximum SEO impact</li>
+            <li>Check competitor listings that rank well for inspiration (but don't copy exactly)</li>
+        </ul>
+    </div>
+    
+    <h2>Common Mistakes to Avoid</h2>
+    
+    <ul>
+        <li><strong>ALL CAPS</strong> - Looks spammy and hurts readability</li>
+        <li><strong>Random Punctuation!!!</strong> - Extra exclamation points look unprofessional</li>
+        <li><strong>Too Generic</strong> - "Handmade Item" doesn't tell shoppers what you're selling</li>
+        <li><strong>Too Specific</strong> - Extremely niche descriptions limit your visibility</li>
+        <li><strong>Focusing on Wrong Keywords</strong> - Use words shoppers actually search for</li>
+        <li><strong>Including Size Variations</strong> - Put size options in attributes, not the title</li>
+    </ul>
+    
+    <div class="highlight">
+        <h3>Remember</h3>
+        <p>The perfect Etsy title balances:</p>
+        <ul>
+            <li>SEO optimization (keywords)</li>
+            <li>Human readability</li>
+            <li>Accurate product description</li>
+        </ul>
+        <p>When in doubt, prioritize putting your most important 2-3 keywords in the first 60 characters, and ensure your title clearly communicates what you're selling.</p>
+    </div>
+
+    <script>
+        // Global tags array
+        const tags = [];
+        
+        // DOM elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const tagContainer = document.getElementById('tagContainer');
+            const tagInput = document.getElementById('tagInput');
+            const addTagBtn = document.getElementById('addTagBtn');
+            const currentTitle = document.getElementById('currentTitle');
+            const titleCharCount = document.getElementById('titleCharCount');
+            const optimizeBtn = document.getElementById('optimizeBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            // Add character count functionality for title input
+            currentTitle.addEventListener('input', function() {
+                titleCharCount.textContent = this.value.length;
+                if (this.value.length > 140) {
+                    titleCharCount.style.color = 'red';
+                } else {
+                    titleCharCount.style.color = '#757575';
+                }
+            });
+            
+            // Tag validation function
+            function validateTag(tag) {
+                if (!tag) return false;
+                
+                // Validate tag length
+                if (tag.length > 20) {
+                    alert(`Tag "${tag}" exceeds the 20 character limit and was not added.`);
+                    return false;
+                }
+                
+                // Check for duplicate tags (case insensitive comparison)
+                const isDuplicate = tags.some(existingTag => 
+                    existingTag.toLowerCase() === tag.toLowerCase()
+                );
+                
+                if (isDuplicate) {
+                    alert(`Tag "${tag}" is already in your list.`);
+                    return false;
+                }
+                
+                return true;
+            }
+            
+            // Add tag function
+            function addTag() {
+                const tagText = tagInput.value.trim();
+                
+                if (!tagText) return;
+                
+                // Handle comma-separated tags
+                const tagArray = tagText.split(',').map(tag => tag.trim()).filter(tag => tag);
+                
+                let tagsAdded = 0;
+                
+                for (let tag of tagArray) {
+                    // Use the common validation function
+                    if (validateTag(tag)) {
+                        tags.push(tag);
+                        tagsAdded++;
+                    }
+                }
+                
+                if (tagsAdded > 0) {
+                    renderTags();
+                    tagInput.value = '';
+                }
+            }
+            
+            // Render tags
+            function renderTags() {
+                tagContainer.innerHTML = '';
+                tags.forEach((tag, index) => {
+                    const tagElement = document.createElement('div');
+                    tagElement.className = 'tag';
+                    
+                    const tagText = document.createElement('span');
+                    tagText.textContent = tag;
+                    
+                    const removeButton = document.createElement('button');
+                    removeButton.textContent = '×';
+                    removeButton.onclick = function() {
+                        tags.splice(index, 1);
+                        renderTags();
+                    };
+                    
+                    tagElement.appendChild(tagText);
+                    tagElement.appendChild(removeButton);
+                    tagContainer.appendChild(tagElement);
+                });
+            }
+            
+            // Add event listeners
+            if (addTagBtn) {
+                addTagBtn.addEventListener('click', addTag);
+            }
+            
+            if (tagInput) {
+                tagInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addTag();
+                        e.preventDefault();
+                    }
+                });
+            }
+            
+            // Title optimization logic
+            if (optimizeBtn) {
+                optimizeBtn.addEventListener('click', function() {
+                    if (tags.length === 0) {
+                        alert('Please add at least one tag to generate title suggestions.');
+                        return;
+                    }
+                    
+                    // Get user inputs
+                    const title = currentTitle.value.trim();
+                    const description = document.getElementById('productDescription').value.trim();
+                    
+                    // Generate optimized titles
+                    const optimizedTitles = generateOptimizedTitles(title, tags, description);
+                    
+                    // Display results
+                    renderResults(optimizedTitles);
+                    
+                    // Switch to results tab
+                    switchTab('results-tab', document.querySelector('.tab:nth-child(2)'));
+                });
+            }
+            
+            // Check for word repetition in a title
+            function analyzeWordRepetition(title) {
+                const words = title.toLowerCase()
+                    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+                    .split(/\s+/)
+                    .filter(word => word.length > 2); // Only check words longer than 2 chars
+                
+                const wordCount = {};
+                words.forEach(word => {
+                    wordCount[word] = (wordCount[word] || 0) + 1;
+                });
+                
+                const repeatedWords = Object.keys(wordCount)
+                    .filter(word => wordCount[word] > 2)
+                    .map(word => ({word, count: wordCount[word]}));
+                
+                return {
+                    hasExcessiveRepetition: repeatedWords.length > 0,
+                    repeatedWords: repeatedWords,
+                    wordFrequency: wordCount
+                };
+            }
+            
+            // Remove excessive repetition from title
+            function reduceWordRepetition(title) {
+                const repetition = analyzeWordRepetition(title);
+                
+                if (!repetition.hasExcessiveRepetition) {
+                    return title; // No excessive repetition to fix
+                }
+                
+                let modifiedTitle = title;
+                
+                // Process each repeated word
+                repetition.repeatedWords.forEach(({word, count}) => {
+                    if (count > 2) {
+                        // Find all instances of the word
+                        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                        const matches = [...modifiedTitle.matchAll(regex)];
+                        
+                        // Keep only the first two instances
+                        if (matches.length > 2) {
+                            // Start from the end to avoid position shifts
+                            for (let i = matches.length - 1; i >= 2; i--) {
+                                const start = matches[i].index;
+                                const end = start + word.length;
+                                
+                                // Check if word is part of a segment (handle commas properly)
+                                const segmentStart = modifiedTitle.lastIndexOf(',', start) + 1 || 0;
+                                const segmentEnd = modifiedTitle.indexOf(',', end);
+                                const segment = modifiedTitle.substring(
+                                    segmentStart, 
+                                    segmentEnd > -1 ? segmentEnd : modifiedTitle.length
+                                ).trim();
+                                
+                                // If the segment has multiple words, remove just the repeated word
+                                if (segment.split(/\s+/).length > 1) {
+                                    // Remove the word and any trailing/leading spaces around it
+                                    const beforeChar = modifiedTitle.charAt(start - 1);
+                                    const afterChar = modifiedTitle.charAt(end);
+                                    
+                                    if (beforeChar === ' ' && afterChar === ' ') {
+                                        // Handle "word " case
+                                        modifiedTitle = modifiedTitle.slice(0, start) + modifiedTitle.slice(end + 1);
+                                    } else if (beforeChar === ' ') {
+                                        // Handle " word" case
+                                        modifiedTitle = modifiedTitle.slice(0, start - 1) + modifiedTitle.slice(end);
+                                    } else {
+                                        // Just remove the word
+                                        modifiedTitle = modifiedTitle.slice(0, start) + modifiedTitle.slice(end);
+                                    }
+                                } 
+                                // If it's the only word in the segment, remove the entire segment
+                                else if (segment.toLowerCase() === word.toLowerCase()) {
+                                    const commaPos = modifiedTitle.indexOf(',', segmentStart);
+                                    
+                                    // Handle last segment
+                                    if (commaPos === -1) {
+                                        modifiedTitle = modifiedTitle.slice(0, segmentStart ? segmentStart - 1 : 0);
+                                    } 
+                                    // Handle middle segment
+                                    else {
+                                        modifiedTitle = modifiedTitle.slice(0, segmentStart ? segmentStart - 1 : 0) + 
+                                                    modifiedTitle.slice(commaPos);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                return modifiedTitle;
+            }
+            
+            // Generate optimized titles based on inputs
+            function generateOptimizedTitles(currentTitle, tags, description) {
+                // Sort tags by relevance (shorter multi-word tags first)
+                const sortedTags = [...tags].sort((a, b) => {
+                    // Multi-word tags get priority
+                    const aWords = a.split(' ').length;
+                    const bWords = b.split(' ').length;
+                    
+                    if (aWords > 1 && bWords === 1) return -1;
+                    if (aWords === 1 && bWords > 1) return 1;
+                    
+                    // If both are multi-word or both are single-word, prioritize by length (shorter first)
+                    return a.length - b.length;
+                });
+                
+                // Extract important words from current title and description if available
+                const titleWords = currentTitle ? extractImportantWords(currentTitle) : [];
+                const descWords = description ? extractImportantWords(description) : [];
+                
+                // Generate different title templates
+                let templates = [
+                    generateStandardTemplate(sortedTags, titleWords, descWords),
+                    generateFlippedTemplate(sortedTags, titleWords, descWords),
+                    generateMaterialFirstTemplate(sortedTags, titleWords, descWords),
+                    generateStyleFirstTemplate(sortedTags, titleWords, descWords)
+                ].filter(Boolean); // Remove any null templates
+                
+                
+                // Process each title to ensure quality
+                templates = templates.map(template => {
+                    // First reduce word repetition
+                    let optimizedTitle = reduceWordRepetition(template.title);
+                    
+                    // Then limit commas
+                    const commaCount = countCommas(optimizedTitle);
+                    let commaLimited = limitCommas(optimizedTitle);
+                    const commasReduced = commaCount > 6;
+                    
+                    // Finally ensure length is within limits
+                    const initialLength = commaLimited.length;
+                    let finalTitle = truncateTitle(commaLimited);
+                    const lengthReduced = initialLength > 140;
+                    
+                    // Build explanation with any modifications noted
+                    let explanation = template.explanation;
+                    if (optimizedTitle !== template.title) explanation += " (repetition removed)";
+                    if (commasReduced) explanation += " (commas limited to 6)";
+                    if (lengthReduced) explanation += " (truncated to 140 chars)";
+                    
+                    return {
+                        ...template,
+                        title: finalTitle,
+                        explanation: explanation
+                    };
+                });
+                
+                return templates;
+            }
+            
+            // Count commas in a title
+            function countCommas(title) {
+                return (title.match(/,/g) || []).length;
+            }
+            
+            // Ensure title is within length limit
+            function truncateTitle(title, maxLength = 140) {
+                if (title.length <= maxLength) return title;
+                
+                // Try to find a natural break point (comma) near the max length
+                const lastCommaIndex = title.lastIndexOf(',', maxLength);
+                
+                if (lastCommaIndex !== -1 && lastCommaIndex > maxLength * 0.75) {
+                    // If there's a comma in the latter part of the allowed length, break there
+                    return title.substring(0, lastCommaIndex);
+                } else {
+                    // Otherwise do a hard truncate and ensure we don't cut off in the middle of a word
+                    let truncated = title.substring(0, maxLength);
+                    const lastSpaceIndex = truncated.lastIndexOf(' ');
+                    
+                    // If we cut in the middle of a word and there's a space before, truncate at that space
+                    if (lastSpaceIndex !== -1 && lastSpaceIndex > maxLength * 0.9) {
+                        truncated = truncated.substring(0, lastSpaceIndex);
+                    }
+                    
+                    return truncated;
+                }
+            }
+            
+            // Limit number of commas in a title
+            function limitCommas(title, maxCommas = 6) {
+                const commaCount = countCommas(title);
+                
+                if (commaCount <= maxCommas) return title;
+                
+                // Find the position of the last allowed comma
+                let commaPos = -1;
+                let commaFound = 0;
+                
+                for (let i = 0; i < title.length; i++) {
+                    if (title[i] === ',') {
+                        commaFound++;
+                        if (commaFound === maxCommas) {
+                            commaPos = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (commaPos !== -1) {
+                    return title.substring(0, commaPos + 1) + 
+                           title.substring(commaPos + 1).replace(/,/g, '');
+                }
+                
+                return title;
+            }
+            
+            // Extract important words from text
+            function extractImportantWords(text) {
+                // Remove common stopwords
+                const stopwords = ['and', 'the', 'a', 'an', 'that', 'this', 'for', 'with', 'by', 'of', 'to', 'in', 'on', 'at'];
+                
+                return text.toLowerCase()
+                    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+                    .split(/\s+/)
+                    .filter(word => word.length > 2 && !stopwords.includes(word));
+            }
+            
+            // Convert string to Title Case
+            function toTitleCase(str) {
+                // Words that should not be capitalized (unless they're the first word)
+                const minorWords = ['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 
+                                   'to', 'from', 'by', 'in', 'of', 'with', 'as'];
+                
+                return str.split(' ').map((word, index) => {
+                    // Don't change case of words like "iPhone" or "eBay" that have internal caps
+                    if (word.match(/^[a-z].*[A-Z]/)) return word;
+                    
+                    // Always capitalize the first word
+                    if (index === 0) return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                    
+                    // Don't capitalize minor words (unless they're the first word)
+                    if (minorWords.includes(word.toLowerCase())) return word.toLowerCase();
+                    
+                    // Capitalize the first letter of other words
+                    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                }).join(' ');
+            }
+            
+            // Apply Title Case to a comma-separated title
+            function formatTitleCase(title) {
+                // Split by separators, apply title case to each segment, then rejoin
+                return title.split(/,\s*/).map(segment => toTitleCase(segment)).join(', ');
+            }
+            
+            // Generate a standard template (most common keywords first)
+            function generateStandardTemplate(tags, titleWords, descWords) {
+                // Take the first 3-4 tags for the first 60 chars
+                const primaryTags = tags.slice(0, Math.min(4, tags.length));
+                
+                // Use remaining tags for the rest of the title
+                const secondaryTags = tags.slice(Math.min(4, tags.length));
+                
+                // Create first section (focus on first 60 chars)
+                let firstSection = primaryTags.join(', ');
+                
+                // Create second section
+                let secondSection = '';
+                if (secondaryTags.length > 0) {
+                    secondSection = `, ${secondaryTags.join(', ')}`;
+                }
+                
+                // Add descriptive adjectives if the title is still short
+                if ((firstSection + secondSection).length < 90 && descWords.length > 0) {
+                    const adjectives = ['Unique', 'Custom', 'Handmade', 'Perfect', 'High Quality'];
+                    const relevantAdj = adjectives.filter(adj => !firstSection.toLowerCase().includes(adj.toLowerCase()));
+                    
+                    if (relevantAdj.length > 0) {
+                        secondSection += `, ${relevantAdj[0]} Gift`;
+                    }
+                }
+                
+                // Apply Title Case to the generated title
+                const titleText = firstSection + secondSection;
+                const titleCased = formatTitleCase(titleText);
+                
+                return {
+                    title: titleCased,
+                    explanation: "Standard template with most important keywords first"
+                };
+            }
+            
+            // Generate a flipped template (starts with a benefit)
+            function generateFlippedTemplate(tags, titleWords, descWords) {
+                // Find a benefit or use case for the product
+                const benefits = ['Perfect Gift', 'Home Decor', 'Special Occasion', 'Unique Present'];
+                const usedBenefit = benefits[Math.floor(Math.random() * benefits.length)];
+                
+                // Take primary product tags (limit to 3)
+                const primaryTags = tags.slice(0, Math.min(3, tags.length));
+                
+                // Combine with benefit
+                let firstSection = `${usedBenefit}, ${primaryTags.join(', ')}`;
+                
+                // Use remaining tags
+                const secondaryTags = tags.slice(Math.min(3, tags.length));
+                let secondSection = '';
+                if (secondaryTags.length > 0) {
+                    secondSection = `, ${secondaryTags.join(', ')}`;
+                }
+                
+                // Apply Title Case to the generated title
+                const titleText = firstSection + secondSection;
+                const titleCased = formatTitleCase(titleText);
+                
+                return {
+                    title: titleCased,
+                    explanation: "Benefit-first template highlighting a use case or occasion"
+                };
+            }
+            
+            // Generate a material-first template
+            function generateMaterialFirstTemplate(tags, titleWords, descWords) {
+                // Common materials
+                const materials = ['Wood', 'Ceramic', 'Metal', 'Glass', 'Leather', 'Cotton', 'Wool', 'Acrylic', 'Vinyl'];
+                
+                // Find material in tags or title words
+                let material = null;
+                for (const mat of materials) {
+                    if (tags.some(tag => tag.toLowerCase().includes(mat.toLowerCase())) || 
+                        titleWords.some(word => word.toLowerCase() === mat.toLowerCase())) {
+                        material = mat;
+                        break;
+                    }
+                }
+                
+                if (!material) return null; // Skip this template if no material found
+                
+                // Find the main product type
+                const mainProduct = tags.find(tag => tag.split(' ').length > 1) || tags[0];
+                
+                // Use material and product type first
+                let firstSection = `${material} ${mainProduct}`;
+                if (firstSection.toLowerCase() !== mainProduct.toLowerCase()) {
+                    firstSection += ', ';
+                } else {
+                    firstSection = mainProduct + ', ';
+                }
+                
+                // Add other important tags excluding the material and main product
+                const otherTags = tags.filter(tag => 
+                    tag.toLowerCase() !== mainProduct.toLowerCase() && 
+                    !tag.toLowerCase().includes(material.toLowerCase())
+                );
+                
+                const focusTags = otherTags.slice(0, Math.min(3, otherTags.length)).join(', ');
+                const remainingTags = otherTags.slice(Math.min(3, otherTags.length)).join(', ');
+                
+                // Apply Title Case to the generated title
+                const titleText = firstSection + focusTags + (remainingTags ? `, ${remainingTags}` : '');
+                const titleCased = formatTitleCase(titleText);
+                
+                return {
+                    title: titleCased,
+                    explanation: "Material-first template emphasizing product construction"
+                };
+            }
+            
+            // Generate a style-first template
+            function generateStyleFirstTemplate(tags, titleWords, descWords) {
+                // Common style descriptors
+                const styles = ['Modern', 'Rustic', 'Vintage', 'Minimalist', 'Bohemian', 'Industrial', 'Traditional', 'Contemporary'];
+                
+                // Find style in tags or title words
+                let style = null;
+                for (const st of styles) {
+                    if (tags.some(tag => tag.toLowerCase().includes(st.toLowerCase())) || 
+                        titleWords.some(word => word.toLowerCase() === st.toLowerCase()) ||
+                        descWords.some(word => word.toLowerCase() === st.toLowerCase())) {
+                        style = st;
+                        break;
+                    }
+                }
+                
+                if (!style) return null; // Skip this template if no style found
+                
+                // Find the main product type
+                const mainProduct = tags.find(tag => tag.split(' ').length > 1) || tags[0];
+                
+                // Use style and product type first
+                let firstSection = `${style} ${mainProduct}`;
+                if (firstSection.toLowerCase() !== mainProduct.toLowerCase()) {
+                    firstSection += ', ';
+                } else {
+                    firstSection = mainProduct + ', ';
+                }
+                
+                // Add other important tags excluding the style and main product
+                const otherTags = tags.filter(tag => 
+                    tag.toLowerCase() !== mainProduct.toLowerCase() && 
+                    !tag.toLowerCase().includes(style.toLowerCase())
+                );
+                
+                const focusTags = otherTags.slice(0, Math.min(3, otherTags.length)).join(', ');
+                const remainingTags = otherTags.slice(Math.min(3, otherTags.length)).join(', ');
+                
+                // Apply Title Case to the generated title
+                const titleText = firstSection + focusTags + (remainingTags ? `, ${remainingTags}` : '');
+                const titleCased = formatTitleCase(titleText);
+                
+                return {
+                    title: titleCased,
+                    explanation: "Style-first template highlighting design aesthetic"
+                };
+            }
+            
+            // Render results 
+            function renderResults(titles) {
+                resultsContainer.innerHTML = '<h3>Optimized Title Suggestions</h3>';
+                
+                if (titles.length === 0) {
+                    resultsContainer.innerHTML += '<p>Unable to generate title suggestions. Please add more descriptive tags.</p>';
+                    return;
+                }
+                
+                titles.forEach((title, index) => {
+                    // Create result container
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'title-result';
+                    
+                    // Add copy button
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-btn';
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.addEventListener('click', function() {
+                        navigator.clipboard.writeText(title.title).then(() => {
+                            this.textContent = 'Copied!';
+                            setTimeout(() => {
+                                this.textContent = 'Copy';
+                            }, 2000);
+                        });
+                    });
+                    
+                    // Format title with first 60 chars highlighted
+                    const titleHtml = `
+                        <div>
+                            <strong>Option ${index + 1}:</strong><br>
+                            <span class="first-60">${title.title.slice(0, 60)}</span>${title.title.slice(60)}
+                        </div>
+                        <div class="char-count">${title.title.length}/140 characters</div>
+                        <p><em>${title.explanation}</em></p>
+                    `;
+                    
+                    resultDiv.innerHTML = titleHtml;
+                    resultDiv.appendChild(copyBtn);
+                    resultsContainer.appendChild(resultDiv);
+                });
+                
+                // Add tips
+                const tipsDiv = document.createElement('div');
+                tipsDiv.className = 'tip';
+                tipsDiv.innerHTML = `
+                    <h3>Title Tips</h3>
+                    <ul>
+                        <li>Choose the title that best describes your product while maintaining keyword focus</li>
+                        <li>All titles place important keywords in the first 60 characters (highlighted in blue)</li>
+                        <li>Consider adding seasonal keywords if relevant (e.g., "Valentine's Gift", "Christmas Decoration")</li>
+                        <li>Remember to update your tags to match keywords in your title</li>
+                    </ul>
+                `;
+                resultsContainer.appendChild(tipsDiv);
+            }
+        });
+        
+        // Tab switching function
+        function switchTab(tabId, tabElement) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show the selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Update tab styling
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            tabElement.classList.add('active');
+        }
+    </script>
+</body>
+</html>

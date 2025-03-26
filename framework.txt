@@ -1,5 +1,11 @@
-Complete Etsy Scoring Framework + Criteria 
-combined fields
+Complete Etsy Scoring Framework + Criteria
+
+## Definitions
+- Separator: A character or sequence used to divide keywords in a title (comma, pipe " | ", dash " - ")
+- Focus Keywords: Important keywords from tags that appear in the title
+- Multi-word Tag: A tag containing more than one word (separated by spaces)
+- Low Quality Tag: A tag with fewer than 10 characters AND fewer than 3 words
+- Tag Diversity: Ratio of unique words to total words across all tags
 Overall Grade Calculation
 Overall score = (Title score × 0.40) + (Tag score × 0.40) + (Description score × 0.20)
 Scoring Scale:
@@ -24,11 +30,11 @@ No words repeated more than twice (0.8 points)
 Any word repeated 3+ times results in 0 points for this category
 This is an all-or-nothing score with no partial credit
 Structural Elements (0.8 points)
-Definition: Use of commas as separators
+Definition: Use of separators (commas, pipes " | ", dashes " - ")
 Scoring:
-2-6 commas: 0.8 points
-1 comma: 0.4 points
-6+ commas or 0 commas: 0.2 points
+2-6 separators: 0.8 points
+1 separator: 0.4 points
+6+ separators or 0 separators: 0.2 points
 
 Tag Scoring (1-4 points)
 Tag Count (1.0 point)
@@ -42,8 +48,8 @@ Scoring: (Number of multi-word tags / Total tags)
 Tag Quality (1.0 point)
 Low quality tags: less than 10 characters AND fewer than 3 words
 No low quality tags (1.0 point)
-Any low quality tags (0.0 points)
-This is an all-or-nothing score with no partial credit
+Presence of at least 1 low quality tag (0.5 point)
+More than 1 low quality tag (0.0 points)
 
 
 Tag Diversity (1.0 point)
@@ -65,7 +71,14 @@ Scoring:
 <50 
 Structural Formatting (1.2 points)
 Definition: Use of formatting elements for readability
-Presence of bulleted or numbered lists (•, *, -, 1.)
+Presence of any of these list formats:
+- Bullet points (•, *, +)
+- Hyphens at the beginning of a line or after a line break
+- Numbered lists (1., 2., etc.)
+- Lettered lists (a), b), a., b., etc.)
+- Lines starting with "+ " format (e.g., "+ Shipped FAST & FREE")
+- Emoji and symbol list markers (all Unicode emoji and symbols like ✅, ✔, ☑, ✓, ➢, ◦, +, etc.)
+Note: Hyphens within words (e.g., "sister-in-law") are not counted as list formatting
 This is an all or nothing score; full points if list elements are present, zero if not
 
 
