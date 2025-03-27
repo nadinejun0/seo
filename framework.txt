@@ -20,9 +20,10 @@ Scoring:
 70-140 characters: 1.2  points
 50-69 characters: 0.6 points
 <50 or >140 characters: 0.3 points
-Focus keywords in first 40 Characters (1.2 points)
-Definition: Each tag keyword found in the first 60 characters
+Focus keywords in first 60 Characters (1.2 points)
+Definition: Each tag keyword found in the first 60 characters (ignoring punctuation/separators)
 Scoring: 0.3 points per tag (up to 1.2 points)
+Updated [03/27/2025]
 Keyword Redundancy (0.8 points)
 Definition: Abnormal repetition of words or phrases
 Scoring:
@@ -31,10 +32,11 @@ Any word repeated 3+ times results in 0 points for this category
 This is an all-or-nothing score with no partial credit
 Structural Elements (0.8 points)
 Definition: Use of separators (commas, pipes " | ", dashes " - ")
-Scoring:
-2-6 separators: 0.8 points
+Scoring: 
+2+ separators: 0.8 points
 1 separator: 0.4 points
-6+ separators or 0 separators: 0.2 points
+0 separators: 0.2 points
+Updated [03/27/2025]
 
 Tag Scoring (1-4 points)
 Tag Count (1.0 point)
