@@ -69,13 +69,45 @@ function calculateTitleScore(e) {
         pills: []
     }); // Remove punctuation/separators from title for better keyword matching
     const n = e.substring(0, 60).toLowerCase().replace(/[,.|\-:;'"!?()]/g, ' ').replace(/\s+/g, ' ').trim();
-    // Check if each tag appears in the cleaned title
-    const s = tags.filter(tag => {
+    
+    // Ensure tags is always an array
+    const tagsArray = Array.isArray(tags) ? tags : [];
+    
+    // Improved focus keyword detection - be more lenient with matches
+    // 1. First try exact matches
+    let s = tagsArray.filter(tag => {
         const cleanTag = tag.toLowerCase();
         return n.includes(cleanTag);
     });
-    if (t.focusKeywords = s.length, t.matchingKeywords = s, t.focusKeywordScore = Math.min(.3 * s.length, 1.2), t.focusKeywordScore < .3) {
-        const e = tags.filter((e => !n.includes(e.toLowerCase()))).slice(0, 3);
+    
+    // 2. If no exact matches, try more flexible matching (individual words)
+    if (s.length === 0) {
+        const titleWords = n.split(/\s+/);
+        s = tagsArray.filter(tag => {
+            const tagWords = tag.toLowerCase().split(/\s+/);
+            // Check if any word from the tag appears in the title
+            return tagWords.some(word => {
+                // Only consider words with 4+ characters to avoid matching too generic terms
+                if (word.length < 4) return false; 
+                return titleWords.includes(word);
+            });
+        });
+    }
+    
+    // Always ensure matchingKeywords is a valid array
+    t.matchingKeywords = Array.isArray(s) ? s : [];
+    t.focusKeywords = t.matchingKeywords.length;
+    
+    // Calculate focus keyword score based on the number of matching keywords
+    // 0 keywords = 0.0 points
+    // 1 keyword = 0.3 points
+    // 2 keywords = 0.6 points
+    // 3 keywords = 0.9 points
+    // 4+ keywords = 1.2 points (max)
+    t.focusKeywordScore = Math.min(.3 * t.focusKeywords, 1.2);
+    
+    if (t.focusKeywordScore < .3) {
+        const e = tagsArray.filter((e => !n.includes(e.toLowerCase()))).slice(0, 3);
         t.recommendations.push({
             text: "Include at least one tag keyword in the first 60 characters",
             pills: e
@@ -190,9 +222,12 @@ function calculateDescriptionScore(e, t) {
 function getGrade(e) {
     return e >= 3.5 ? "A" : e >= 2.5 ? "B" : e >= 1.5 ? "C" : "D"
 }
-addTagBtn.addEventListener("click", addTag), document.getElementById("clearTagsBtn").addEventListener("click", (function () {
+// Check if elements exist before adding event listeners
+if (addTagBtn) addTagBtn.addEventListener("click", addTag);
+if (document.getElementById("clearTagsBtn")) document.getElementById("clearTagsBtn").addEventListener("click", (function () {
     tags.length = 0, renderTags()
-})), document.getElementById("copyTagsBtn").addEventListener("click", (function () {
+}));
+if (document.getElementById("copyTagsBtn")) document.getElementById("copyTagsBtn").addEventListener("click", (function () {
     if (0 === tags.length) return void alert("No tags to copy.");
     const e = tags.join(",");
     navigator.clipboard.writeText(e).then((() => {

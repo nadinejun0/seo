@@ -45,18 +45,663 @@ Additional Info:
 ================================================================
 Directory Structure
 ================================================================
+.gitignore
+batch-processor.html
 classify.html
-CLAUDE.md
+etsygrade.js
+example-input-1.csv
+example-input-2.csv
+examples.json
+examples.txt
+framework.txt
+index copy.html
 index.html
-package.json
-README.md
-server.js
-test-server.js
-test.html
+perfect_examples.txt
+style.css
+title-guide.css
+title-guide.html
+title-optim.js
 
 ================================================================
 Files
 ================================================================
+
+================
+File: .gitignore
+================
+# Environment variables
+openai.env
+node_modules/
+.DS_Store
+old/
+claude.md
+repomix-output.txt
+index-copy.html
+old.zip
+
+================
+File: batch-processor.html
+================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch CSV Etsy Listing Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .batch-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #f5f5f5;
+        }
+        
+        .upload-area.active {
+            border-color: #F56400;
+            background-color: #fff8e1;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        #uploadLabel {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #F56400;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        #uploadLabel:hover {
+            background-color: #E05800;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            width: 100%;
+            background-color: #eee;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        
+        table th, table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        table th {
+            background-color: #f0f0f0;
+            position: sticky;
+            top: 0;
+        }
+        
+        .results-area {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .column-mapping {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .mapping-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .mapping-item label {
+            min-width: 100px;
+        }
+        
+        .instructions {
+            background-color: #fff8e1;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .sample-format {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Batch CSV Etsy Listing Analyzer</h1>
+    
+    <p>Upload a CSV file with your Etsy listings to analyze them in bulk and receive a downloadable report with SEO scores and recommendations.</p>
+    
+    <div class="instructions">
+        <h3>Instructions</h3>
+        <p>Your CSV file should have the following columns:</p>
+        <ul>
+            <li><strong>Title</strong> - The listing title</li>
+            <li><strong>Tags</strong> - All tags, comma-separated (up to 13)</li>
+            <li><strong>Description</strong> - The listing description</li>
+        </ul>
+        <p>The output CSV will contain all input data plus these additional columns:</p>
+        <ul>
+            <li><strong>Overall Score</strong> - Combined score (1-4)</li>
+            <li><strong>Title Score</strong> - Score for title (1-4)</li>
+            <li><strong>Tags Score</strong> - Score for tags (1-4)</li>
+            <li><strong>Description Score</strong> - Score for description (1-4)</li>
+            <li><strong>Focus Keywords</strong> - Keywords from tags detected in the first 60 chars of title</li>
+            <li><strong>Grade</strong> - Letter grade (A, B, C, D)</li>
+        </ul>
+        
+        <div class="sample-format">
+Title,Tags,Description
+"Handmade Ceramic Mug, Coffee Cup","handmade ceramic mug,coffee cup,modern pottery,unique gift,kitchen decor","This handmade ceramic mug is perfect for morning coffee.
+
+• Made from high-quality clay
+• Microwave safe
+• Dimensions: 3.5" tall"
+        </div>
+    </div>
+    
+    <div class="batch-section">
+        <h2>Upload Your CSV File</h2>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>Drag and drop your CSV file here</p>
+            <p>- or -</p>
+            <label for="fileInput" id="uploadLabel">Choose File</label>
+            <input type="file" id="fileInput" accept=".csv">
+            <p id="fileInfo">No file selected</p>
+            <a href="example-input-2.csv" class="tool-link" style="display: inline-block; margin-top: 20px;">
+                Download sample CSV for testing
+            </a>
+        </div>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <button id="analyzeBtn" disabled>Analyze Listings</button>
+        <button id="downloadBtn" style="display: none;">Download Results</button>
+    </div>
+    
+    <div class="results-area" id="resultsArea" style="display: none;">
+        <h2>Analysis Results</h2>
+        <p><span id="totalAnalyzed">0</span> listings analyzed. <a href="#" id="downloadLink">Download full results as CSV</a></p>
+        
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Overall Score</th>
+                    <th>Title Score</th>
+                    <th>Tags Score</th>
+                    <th>Desc. Score</th>
+                    <th>Focus Keywords</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- Results will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <script src="etsygrade.js"></script>
+    <script>
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const resultsArea = document.getElementById('resultsArea');
+        const resultsBody = document.getElementById('resultsBody');
+        const totalAnalyzed = document.getElementById('totalAnalyzed');
+        const downloadLink = document.getElementById('downloadLink');
+        
+        // Global variables
+        let csvFile = null;
+        let parsedData = [];
+        let analysisResults = [];
+        
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            uploadArea.classList.add('active');
+        }
+        
+        function unhighlight() {
+            uploadArea.classList.remove('active');
+        }
+        
+        uploadArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+        
+        // File input handling
+        fileInput.addEventListener('change', function(e) {
+            console.log('File input change event triggered');
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            console.log('Handling file:', file.name, file.type);
+            // Accept any file ending with .csv regardless of MIME type
+            // Some browsers/systems may not report CSV files as text/csv
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please upload a CSV file.');
+                return;
+            }
+            
+            csvFile = file;
+            fileInfo.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+            analyzeBtn.disabled = false;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        // Parse CSV function with robust handling of line breaks and quotes
+        function parseCSV(text) {
+            const result = [];
+            const headers = [];
+            let currentLine = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            // Add a trailing newline to simplify processing
+            text += '\n';
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1] || '';
+                
+                // Handle quotes
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        // Double quotes inside quotes - add a single quote and skip the next char
+                        currentField += '"';
+                        i++;
+                    } else {
+                        // Toggle quote mode
+                        inQuotes = !inQuotes;
+                    }
+                } 
+                // Handle commas
+                else if (char === ',' && !inQuotes) {
+                    // End of field
+                    currentLine.push(currentField);
+                    currentField = '';
+                }
+                // Handle newlines
+                else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    // Skip empty newlines if we're not in a field
+                    if (char === '\r' && nextChar === '\n') {
+                        i++; // Skip the \n in \r\n
+                    }
+                    
+                    // Only process if we have content (not just sequential newlines)
+                    if (currentField !== '' || currentLine.length > 0) {
+                        // Add the last field
+                        currentLine.push(currentField);
+                        currentField = '';
+                        
+                        // Process the line
+                        if (headers.length === 0) {
+                            // First line - use as headers
+                            for (let j = 0; j < currentLine.length; j++) {
+                                headers.push(currentLine[j].trim());
+                            }
+                        } else if (currentLine.length > 0) {
+                            // Data line - create an object with header keys
+                            const obj = {};
+                            const minLength = Math.min(headers.length, currentLine.length);
+                            
+                            for (let j = 0; j < minLength; j++) {
+                                obj[headers[j]] = currentLine[j].trim();
+                            }
+                            
+                            // Add default values for missing fields
+                            for (let j = currentLine.length; j < headers.length; j++) {
+                                obj[headers[j]] = '';
+                            }
+                            
+                            // Only add if we have the required fields
+                            if (obj['Title'] && obj['Tags'] && obj['Description']) {
+                                result.push(obj);
+                            }
+                        }
+                        
+                        currentLine = [];
+                    }
+                }
+                // Normal character
+                else {
+                    currentField += char;
+                }
+            }
+            
+            return {
+                headers: headers,
+                data: result
+            };
+        }
+        
+        // Analyze button click handler
+        analyzeBtn.addEventListener('click', function() {
+            if (!csvFile) return;
+            
+            console.log('Starting file analysis...');
+            
+            const reader = new FileReader();
+            reader.readAsText(csvFile);
+            
+            reader.onload = function(e) {
+                console.log('File loaded successfully');
+                const csvText = e.target.result;
+                console.log('CSV text length:', csvText.length);
+                try {
+                    const parsedCSV = parseCSV(csvText);
+                    console.log('CSV parsed, headers:', parsedCSV.headers);
+                    console.log('CSV parsed, row count:', parsedCSV.data.length);
+                    
+                    parsedData = parsedCSV.data;
+                    
+                    if (parsedData.length === 0) {
+                        alert('No valid data found in the CSV file. Make sure it contains Title, Tags, and Description columns.');
+                        return;
+                    }
+                    
+                    // Begin processing
+                    progressBar.style.display = 'block';
+                    processListings(parsedData);
+                } catch (error) {
+                    console.error('Error parsing CSV:', error);
+                    alert('Error parsing the CSV file: ' + error.message);
+                }
+            };
+            
+            reader.onerror = function(error) {
+                console.error('Error reading file:', error);
+                alert('Error reading the file. Please try again.');
+            };
+        });
+        
+        // Process listings in batches to avoid UI freezing
+        function processListings(listings) {
+            analysisResults = [];
+            let processed = 0;
+            const total = listings.length;
+            
+            // Process in batches of 5
+            function processBatch(startIndex) {
+                const endIndex = Math.min(startIndex + 5, total);
+                
+                for (let i = startIndex; i < endIndex; i++) {
+                    const listing = listings[i];
+                    const result = analyzeListingForCSV(listing);
+                    analysisResults.push(result);
+                    
+                    processed++;
+                    updateProgress(processed / total);
+                }
+                
+                // Continue with next batch or finish
+                if (processed < total) {
+                    setTimeout(() => processBatch(endIndex), 0);
+                } else {
+                    finishProcessing();
+                }
+            }
+            
+            // Start processing
+            processBatch(0);
+        }
+        
+        function updateProgress(ratio) {
+            const percent = Math.round(ratio * 100);
+            progressFill.style.width = percent + '%';
+        }
+        
+        function finishProcessing() {
+            progressBar.style.display = 'none';
+            
+            // Show results area
+            resultsArea.style.display = 'block';
+            totalAnalyzed.textContent = analysisResults.length;
+            
+            // Clear previous results
+            resultsBody.innerHTML = '';
+            
+            // Add results to table (show first 50 for performance)
+            const displayLimit = Math.min(analysisResults.length, 50);
+            
+            for (let i = 0; i < displayLimit; i++) {
+                const result = analysisResults[i];
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${escapeHTML(result.Title.substring(0, 50))}${result.Title.length > 50 ? '...' : ''}</td>
+                    <td>${result.OverallScore}</td>
+                    <td>${result.TitleScore}</td>
+                    <td>${result.TagsScore}</td>
+                    <td>${result.DescriptionScore}</td>
+                    <td>${result.FocusKeywords}</td>
+                    <td>${result.Grade}</td>
+                `;
+                
+                resultsBody.appendChild(row);
+            }
+            
+            // Make download available
+            generateCSVDownload();
+        }
+        
+        // Function to analyze a single listing for CSV output
+        function analyzeListingForCSV(listing) {
+            console.log('Analyzing listing:', listing.Title);
+            
+            // Handle case sensitivity in column names
+            const title = listing.Title || listing.title;
+            const tagsInput = listing.Tags || listing.tags;
+            const description = listing.Description || listing.description;
+            
+            if (!title || !tagsInput || !description) {
+                console.warn('Missing required fields for listing:', listing);
+                return {
+                    ...listing,
+                    OverallScore: "0.00",
+                    TitleScore: "0.00",
+                    TagsScore: "0.00",
+                    DescriptionScore: "0.00",
+                    FocusKeywords: "",
+                    Grade: "N/A"
+                };
+            }
+            
+            // Reset the tags array
+            window.tags = [];
+            
+            // Split the tags string, trim each tag, and add to the tags array
+            const tagList = tagsInput.split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag && tag.length <= 20);
+                
+            tagList.forEach(tag => {
+                if (window.tags.length < 13 && !window.tags.some(t => t.toLowerCase() === tag.toLowerCase())) {
+                    window.tags.push(tag);
+                }
+            });
+            
+            // Calculate scores
+            const titleScore = calculateTitleScore(title);
+            const tagScore = calculateTagsScore(window.tags);
+            const descriptionScore = calculateDescriptionScore(description, title);
+            
+            // Calculate overall score
+            const overallScore = 
+                (titleScore.score * 0.4) + 
+                (tagScore.score * 0.4) + 
+                (descriptionScore.score * 0.2);
+                
+            const grade = getGrade(overallScore);
+            
+            // Create result object that includes all original data plus analysis
+            // Make sure to preserve the original field names exactly as they were
+            const result = {
+                ...listing,
+                OverallScore: overallScore.toFixed(2),
+                TitleScore: titleScore.score.toFixed(2),
+                TagsScore: tagScore.score.toFixed(2),
+                DescriptionScore: descriptionScore.score.toFixed(2),
+                FocusKeywords: titleScore.matchingKeywords.join(', '),
+                Grade: grade
+            };
+            
+            console.log('Analysis complete for:', title.substring(0, 30) + '...');
+            return result;
+        }
+        
+        // Generate CSV download
+        function generateCSVDownload() {
+            if (analysisResults.length === 0) return;
+            
+            // Get all headers from the first result
+            const allHeaders = Object.keys(analysisResults[0]);
+            
+            // Arrange headers in a useful order
+            const orderedHeaders = [
+                'Title', 'OverallScore', 'Grade', 'TitleScore', 'TagsScore', 
+                'DescriptionScore', 'FocusKeywords', 'Tags', 'Description'
+            ];
+            
+            // Add any headers that weren't explicitly ordered
+            allHeaders.forEach(header => {
+                if (!orderedHeaders.includes(header)) {
+                    orderedHeaders.push(header);
+                }
+            });
+            
+            // Create CSV header row
+            let csv = orderedHeaders.join(',') + '\n';
+            
+            // Add data rows
+            analysisResults.forEach(result => {
+                const row = orderedHeaders.map(header => {
+                    let value = result[header] || '';
+                    
+                    // Properly escape and quote fields
+                    if (typeof value === 'string') {
+                        // Double up any quotes in the content
+                        value = value.replace(/"/g, '""');
+                        
+                        // If it contains commas, newlines, or quotes, wrap in quotes
+                        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+                            value = `"${value}"`;
+                        }
+                    }
+                    
+                    return value;
+                }).join(',');
+                
+                csv += row + '\n';
+            });
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            downloadLink.href = url;
+            downloadLink.download = `etsy_listings_analysis_${new Date().toISOString().slice(0, 10)}.csv`;
+            
+            // Also enable download button
+            downloadBtn.style.display = 'inline-block';
+            downloadBtn.onclick = function() {
+                downloadLink.click();
+            };
+        }
+        
+        // Helper function to escape HTML special characters
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
 
 ================
 File: classify.html
@@ -493,6 +1138,13 @@ File: classify.html
                         showError('Please enter at least two categories separated by commas');
                         return;
                     }
+                    
+                    // Validate each category's length (max 20 characters)
+                    const longCategories = categories.filter(cat => cat.length > 20);
+                    if (longCategories.length > 0) {
+                        showError(`Categories must be 20 characters or less. Problematic categories: ${longCategories.join(', ')}`);
+                        return;
+                    }
                 }
                 
                 // Save API key to localStorage
@@ -571,6 +1223,13 @@ File: classify.html
                     categories = customCategories.value.split(',').map(cat => cat.trim()).filter(cat => cat);
                     if (categories.length < 2) {
                         showError('Please enter at least two categories separated by commas');
+                        return;
+                    }
+                    
+                    // Validate each category's length (max 20 characters)
+                    const longCategories = categories.filter(cat => cat.length > 20);
+                    if (longCategories.length > 0) {
+                        showError(`Categories must be 20 characters or less. Problematic categories: ${longCategories.join(', ')}`);
                         return;
                     }
                 }
@@ -710,32 +1369,973 @@ File: classify.html
 </html>
 
 ================
-File: CLAUDE.md
+File: etsygrade.js
 ================
-# CLAUDE.md - SEO Tool Project Guide
+const tags = [];
 
-## Commands
-- Start server: `npm start` (runs `node server.js` on port 3000)
-- Test server: `node test-server.js` (runs on port 3001)
-- Access applications:
-  - Etsy Listing Optimizer: http://localhost:3000/index.html
-  - Text Classifier: http://localhost:3000/classify.html
-  - API Test: http://localhost:3000/test.html
+function validateTag(e) {
+    if (e.length > 20) return alert(`Tag "${e}" exceeds the 20 character limit and was not added.`), !1;
+    if (tags.length >= 13) return alert("Maximum of 13 tags reached."), !1;
+    return !tags.some((t => t.toLowerCase() === e.toLowerCase())) || (alert(`Tag "${e}" is already in your list. Duplicate tags are not allowed.`), !1)
+}
+const tagContainer = document.getElementById("tagContainer"),
+    tagInput = document.getElementById("tagInput"),
+    addTagBtn = document.getElementById("addTagBtn"),
+    analyzeBtn = document.getElementById("analyzeBtn"),
+    sampleBtn = document.getElementById("sampleBtn"),
+    titleInput = document.getElementById("titleInput"),
+    descriptionInput = document.getElementById("descriptionInput"),
+    resultsContainer = document.getElementById("resultsContainer");
 
-## Code Style Guidelines
-- **Imports**: CommonJS style (require/module.exports)
-- **Error Handling**: Use try/catch blocks with specific error messages
-- **Logging**: Use console.log with timestamps and request details
-- **API Calls**: Use fetch with proper error handling
-- **Frontend**: JavaScript with event listeners, no frameworks
-- **HTML/CSS**: Clean, semantic markup with CSS variables
-- **Naming**: camelCase for variables/functions, descriptive names
-- **Comments**: Use comments for function descriptions and complex logic
+function addTag() {
+    const e = document.getElementById("tagInput"),
+        t = e.value.trim();
+    if (!t) return;
+    const n = t.split(",").map((e => e.trim())).filter((e => e));
+    let s = 0;
+    for (let e of n)
+        if (validateTag(e) && (tags.push(e), s++), tags.length >= 13) break;
+    s > 0 && (renderTags(), e.value = "")
+}
 
-## Project Structure
-- Server-side proxy for API calls (server.js)
-- Static HTML/CSS/JS frontend
-- OpenAI API integration for text classification
+function renderTags() {
+    tagContainer.innerHTML = "", tags.forEach(((e, t) => {
+        const n = document.createElement("div");
+        n.className = "tag";
+        const s = document.createElement("span");
+        s.textContent = e;
+        const a = document.createElement("button");
+        a.textContent = "×", a.onclick = function () {
+            tags.splice(t, 1), renderTags()
+        }, n.appendChild(s), n.appendChild(a), tagContainer.appendChild(n)
+    }))
+}
+
+function analyzeEtsyListing() {
+    const e = titleInput.value.trim(),
+        t = descriptionInput.value.trim(),
+        n = calculateTitleScore(e),
+        s = calculateTagsScore(tags),
+        a = calculateDescriptionScore(t, e),
+        o = .4 * n.score + .4 * s.score + .2 * a.score;
+    let i = `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Overall Score</h3>\n                <span class="score-value grade-${getGrade(o)}">${o.toFixed(2)} (${getGrade(o)})</span>\n            </div>\n        </div>\n    `;
+    i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Title</h3>\n                <span class="score-value grade-${getGrade(n.score)}">${n.score.toFixed(2)} (${getGrade(n.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Character Count (${n.charCount})</span>\n                    <span>${n.charCountScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Focus Keywords (${n.focusKeywords})</span>\n                    <span>${n.focusKeywordScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Focus Keywords:</span>\n                    <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">\n                        ${n.matchingKeywords.map((e => `<span class="highlight" style="font-size: 12px; margin: 2px;">${e}</span>`)).join("")}\n                    </span>\n                </div>\n                <div class="score-item">\n                    <span>Redundancy</span>\n                    <span>${n.redundancyScore.toFixed(1)} / 0.8</span>\n                </div>\n                <div class="score-item">\n                    <span>Separators (${n.commas} total: ${n.separatorTypes.commas} commas, ${n.separatorTypes.pipes} pipes, ${n.separatorTypes.dashes} dashes)</span>\n                    <span>${n.commaScore.toFixed(1)} / 0.8</span>\n                </div>\n            </div>\n            <div style="margin-top: 15px;">\n                <p>First 60 Characters (focus area):</p>\n                <div style="margin-bottom: 15px;"><span class="highlight">${e.substring(0, 60)}</span>${e.substring(60)}</div>\n            </div>\n            ${n.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${n.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Tags</h3>\n                <span class="score-value grade-${getGrade(s.score)}">${s.score.toFixed(2)} (${getGrade(s.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Tag Count (${s.tagCount}/13)</span>\n                    <span>${s.tagCountScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Multi-word Ratio (${(100 * s.multiWordRatio).toFixed(0)}%)</span>\n                    <span>${s.multiWordScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Tag Quality (${0 === s.lowQualityTags.length ? "no low quality tags" : 1 === s.lowQualityTags.length ? "1 low quality tag (-0.5)" : s.lowQualityTags.length + " low quality tags (-1.0)"})</span>\n                    <span>${s.qualityScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Tag Diversity (${(100 * s.diversityRatio).toFixed(0)}% unique words - ${s.diversityRatio >= .8 ? "Excellent" : s.diversityRatio >= .6 ? "Good" : s.diversityRatio >= .4 ? "Fair" : "Poor"})</span>\n                    <span>${s.diversityScore.toFixed(1)} / 1.0</span>\n                </div>\n            </div>\n            <div style="margin-top: 15px;">\n                <div class="tag-container">\n                    ${tags.map((e => { const t = n.matchingKeywords.some((t => t.toLowerCase() === e.toLowerCase())), s = e.length < 10 && e.split(" ").length < 3; return `<div class="tag ${t ? "highlighted-tag" : s ? "low-quality-tag" : ""}">${e}</div>` })).join("")}\n                </div>\n            </div>\n            ${s.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${s.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Description</h3>\n                <span class="score-value grade-${getGrade(a.score)}">${a.score.toFixed(2)} (${getGrade(a.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Length (${t.length} characters, ${a.wordCount} words)</span>\n                    <span>${a.lengthScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Formatting (${a.formattingElements.hasListElements ? "Has lists" : "Missing lists"})</span>\n                    <span>${a.formattingScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Keyword Integration (${Math.round(100 * a.keywordRatio)}%)</span>\n                    <span>${a.keywordScore.toFixed(1)} / 1.6</span>\n                </div>\n                <div class="score-item">\n                    <span>Missing keywords:</span>\n                    <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">\n                        ${a.keywordsMissing.map((e => `<span class="missing-keyword" style="font-size: 12px; margin: 2px; background-color: #e0e0e0; color: #757575; padding: 2px 6px; border-radius: 12px;">${e}</span>`)).join("")}\n                    </span>\n                </div>\n            </div>\n            ${a.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${a.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, resultsContainer.innerHTML = i
+}
+
+function calculateTitleScore(e) {
+    const t = {
+        score: 0,
+        charCount: e.length,
+        charCountScore: 0,
+        focusKeywords: 0,
+        focusKeywordScore: 0,
+        repeatedWords: [],
+        redundancyScore: 0,
+        commas: 0,
+        commaScore: 0,
+        recommendations: [],
+        first60Chars: e.substring(0, 60),
+        matchingKeywords: []
+    };
+    e.length >= 70 && e.length <= 140 ? t.charCountScore = 1.2 : e.length >= 50 && e.length < 70 ? t.charCountScore = .6 : t.charCountScore = .3, t.charCountScore < 1.2 && t.recommendations.push({
+        text: "Aim for 70-140 characters in your title",
+        pills: []
+    }); // Remove punctuation/separators from title for better keyword matching
+    const n = e.substring(0, 60).toLowerCase().replace(/[,.|\-:;'"!?()]/g, ' ').replace(/\s+/g, ' ').trim();
+    // Check if each tag appears in the cleaned title
+    const s = tags.filter(tag => {
+        const cleanTag = tag.toLowerCase();
+        return n.includes(cleanTag);
+    });
+    if (t.focusKeywords = s.length, t.matchingKeywords = s, t.focusKeywordScore = Math.min(.3 * s.length, 1.2), t.focusKeywordScore < .3) {
+        const e = tags.filter((e => !n.includes(e.toLowerCase()))).slice(0, 3);
+        t.recommendations.push({
+            text: "Include at least one tag keyword in the first 60 characters",
+            pills: e
+        })
+    }
+    const a = e.toLowerCase().match(/\b[a-zA-Z]{2,}\b/g) || [],
+        o = {};
+    a.forEach((e => {
+        o[e] = (o[e] || 0) + 1
+    })), t.repeatedWords = Object.keys(o).filter((e => o[e] > 2)).map((e => `${e} (${o[e]})`)), 0 === t.repeatedWords.length && (t.redundancyScore = .8), t.redundancyScore < .8 && t.recommendations.push({
+        text: "Reduce repetition of words:",
+        pills: t.repeatedWords
+    });
+    const i = (e.match(/,/g) || []).length,
+        r = (e.match(/ \| /g) || []).length,
+        l = (e.match(/ - /g) || []).length;
+    return t.commas = i + r + l, t.separatorTypes = {
+        commas: i,
+        pipes: r,
+        dashes: l
+    }, t.commas >= 2 ? t.commaScore = .8 : 1 === t.commas ? t.commaScore = .4 : t.commaScore = .2, t.commaScore < .8 && t.recommendations.push({
+        text: "Use 2+ separators (commas, pipes ' | ', or dashes ' - ') to separate keywords",
+        pills: []
+    }), t.score = t.charCountScore + t.focusKeywordScore + t.redundancyScore + t.commaScore, t
+}
+
+function calculateTagsScore(e) {
+    const t = {
+        score: 0,
+        tagCount: e.length,
+        tagCountScore: 0,
+        multiWordRatio: 0,
+        multiWordScore: 0,
+        lowQualityTags: [],
+        qualityScore: 0,
+        diversityRatio: 0,
+        diversityScore: 0,
+        recommendations: []
+    };
+    t.tagCountScore = Math.min(e.length / 13, 1), t.tagCountScore < 1 && t.recommendations.push({
+        text: `Use all 13 available tags (currently using ${e.length})`,
+        pills: []
+    });
+    const n = e.filter((e => e.split(" ").length > 1));
+    if (t.multiWordRatio = e.length > 0 ? n.length / e.length : 0, t.multiWordScore = t.multiWordRatio, t.multiWordScore < .7 && t.recommendations.push({
+            text: "Use more multi-word tags for better specificity",
+            pills: []
+        }), t.lowQualityTags = e.filter((e => e.length < 10 && e.split(" ").length < 3)), 0 === t.lowQualityTags.length ? t.qualityScore = 1 : 1 === t.lowQualityTags.length ? t.qualityScore = .5 : t.qualityScore = 0, t.qualityScore < 1) {
+        const e = 1 === t.lowQualityTags.length ? "Improve this low quality tag (having only one low quality tag reduces your score by 50%):" : `Improve these ${t.lowQualityTags.length} low quality tags (having more than one low quality tag results in zero points):`;
+        t.recommendations.push({
+            text: e,
+            pills: t.lowQualityTags
+        })
+    }
+    const s = new Set;
+    let a = 0;
+    if (e.forEach((e => {
+            const t = e.toLowerCase().split(" ");
+            a += t.length, t.forEach((e => s.add(e)))
+        })), t.diversityRatio = a > 0 ? s.size / a : 0, t.diversityRatio >= .8 ? t.diversityScore = 1 : t.diversityRatio >= .6 ? t.diversityScore = .75 : t.diversityRatio >= .4 ? t.diversityScore = .5 : t.diversityScore = .25, t.diversityScore < .75) {
+        let e;
+        e = t.diversityRatio < .4 ? `Extremely low word diversity (${(100 * t.diversityRatio).toFixed(0)}%). Use more varied words in your tags to improve from 0.25 points.` : t.diversityRatio < .6 ? `Low word diversity (${(100 * t.diversityRatio).toFixed(0)}%). Aim for at least 60% unique words to increase from 0.5 points.` : `Good word diversity (${(100 * t.diversityRatio).toFixed(0)}%). Aim for at least 80% unique words to achieve full points.`, t.recommendations.push({
+            text: e,
+            pills: []
+        })
+    }
+    return t.score = t.tagCountScore + t.multiWordScore + t.qualityScore + t.diversityScore, t
+}
+
+function calculateDescriptionScore(e, t) {
+    const n = {
+        score: 0,
+        wordCount: 0,
+        lengthScore: 0,
+        formattingElements: {
+            hasParagraphBreaks: !1,
+            hasListElements: !1,
+            hasFormatting: !1
+        },
+        formattingScore: 0,
+        keywordRatio: 0,
+        keywordScore: 0,
+        keywordsFound: [],
+        keywordsMissing: [],
+        recommendations: []
+    };
+    n.wordCount = e.split(/\s+/).filter(Boolean).length;
+    const s = e.length;
+    n.lengthScore = s >= 160 ? 1.2 : s >= 100 && s < 160 ? .9 : s >= 50 && s < 100 ? .6 : .3, n.lengthScore < .9 && n.recommendations.push({
+        text: "Aim for 160+ characters in your description",
+        pills: []
+    });
+    const a = e.split(/\n\s*\n/);
+    n.formattingElements.hasParagraphBreaks = a.length > 2 && a.some((e => e.length < 300));
+    if (n.formattingElements.hasListElements = /(?:^|\n)\s*(?:[\+\-\*•]|(?:\d+[\.\)]|[a-zA-Z][\.\)]))\s+/.test(e) || /\*\s+\w+/.test(e) || /(?:^|\n)\s*(?:\p{Emoji}|[✓✔☑√➢◦\+])\s+/u.test(e), n.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(e), n.formattingElements.hasListElements ? n.formattingScore = 1.2 : n.formattingScore = 0, n.formattingScore < 1.2) {
+        let e = [];
+        n.formattingElements.hasParagraphBreaks || e.push("paragraph breaks"), n.formattingElements.hasListElements || e.push("bullet points"), n.formattingElements.hasFormatting || e.push("formatting (*, _, #)"), e.length > 0 && n.recommendations.push({
+            text: `Add ${e.join(", ")} for better readability`,
+            pills: ["• Bullet point", "* Asterisk list", "1. Numbered list"]
+        })
+    }
+    const o = t.toLowerCase().match(/\b[a-zA-Z]{3,}\b/g) || [],
+        i = e.toLowerCase(),
+        r = o.filter((e => i.includes(e))),
+        l = o.filter((e => !i.includes(e)));
+    return n.keywordsFound = r, n.keywordsMissing = l, n.keywordRatio = o.length > 0 ? r.length / o.length : 0, n.keywordScore = Math.min(1.6 * n.keywordRatio, 1.6), n.keywordScore < .8 && n.recommendations.push({
+        text: "Include more keywords from your title in your description:",
+        pills: n.keywordsMissing
+    }), n.score = n.lengthScore + n.formattingScore + n.keywordScore, n
+}
+
+function getGrade(e) {
+    return e >= 3.5 ? "A" : e >= 2.5 ? "B" : e >= 1.5 ? "C" : "D"
+}
+addTagBtn.addEventListener("click", addTag), document.getElementById("clearTagsBtn").addEventListener("click", (function () {
+    tags.length = 0, renderTags()
+})), document.getElementById("copyTagsBtn").addEventListener("click", (function () {
+    if (0 === tags.length) return void alert("No tags to copy.");
+    const e = tags.join(",");
+    navigator.clipboard.writeText(e).then((() => {
+        const e = this.textContent;
+        this.textContent = "Copied!", this.style.backgroundColor = "#4CAF50", this.style.color = "white", setTimeout((() => {
+            this.textContent = e, this.style.backgroundColor = "", this.style.color = ""
+        }), 2e3)
+    })).catch((e => {
+        alert("Failed to copy tags. Please try again.")
+    }))
+})), tagInput.addEventListener("keypress", (function (e) {
+    "Enter" === e.key && (addTag(), e.preventDefault())
+})), sampleBtn.addEventListener("click", (function () {
+    titleInput.value = "Handmade Ceramic Mug, Coffee Cup, Modern Pottery, Unique Gift, Kitchen Decor, Housewarming Present, Tea Cup", tags.length = 0, ["handmade ceramic mug", "coffee cup", "modern pottery", "unique gift", "kitchen decor", "housewarming gift", "tea cup", "ceramic", "pottery", "mug", "gift", "cup", "drinkware"].forEach((e => {
+        (function (e) {
+            return !(e.length > 20) && !(tags.some((t => t.toLowerCase() === e.toLowerCase())) || tags.length >= 13)
+        })(e) && tags.push(e)
+    })), renderTags(), descriptionInput.value = 'This handmade ceramic mug is perfect for your morning coffee or afternoon tea. Each piece is handcrafted with care and attention to detail, making it a unique addition to your kitchen.\n\n• Made from high-quality stoneware clay\n• Microwave and dishwasher safe\n• Holds approximately 12oz\n• Dimensions: 3.5" tall x 3" diameter\n\nThis modern pottery piece makes a wonderful housewarming gift or present for the coffee lover in your life. The minimalist design complements any kitchen decor style.'
+})), analyzeBtn.addEventListener("click", (function () {
+    const e = titleInput.value.trim(),
+        t = descriptionInput.value.trim();
+    e && t && 0 !== tags.length ? analyzeEtsyListing() : alert("Please fill in all fields and add at least one tag.")
+}));
+
+================
+File: example-input-1.csv
+================
+Title,tags,Description
+"Personalized Name Necklace, Gold Word Present, Sterling Silver Jewelry, Custom Jewelry Gift, Dainty Pendant for Women","custom jewelry,  name necklace, gold necklace, personalized gift, jewelry for her, dainty jewelry, necklace for women, custom name necklace, handmade necklace, bridesmaid gift, word present, gift for mom, silver gift","Our Personalized Name and Word Necklace is a timeless and elegant piece, handcrafted from high-quality sterling silver and available in gold or rose gold finishes. This delicate and stylish necklace is a perfect gift or present for birthdays, anniversaries, bridesmaids, or just because! Each piece of jewelry is made to order and features a dainty box chain for a sophisticated look. 
+
+💭  How to Order: Use the personalization box to specify the name and font number. 
+
+💎 Materials: 925 Sterling Silver, 18K Gold, Rose Gold. 
+
+🎁 Shipping & Packaging: Comes in a beautiful gift box, perfect for gifting. 
+
+📌 Turnaround Time: Custom made in 6-10 business days."
+"Stacking Ring, Gold Eternity Present, Minimalist Jewelry, CZ Diamond Band, Gift for Her, Dainty Jewelry Present","stacking ring, dainty jewelry, silver ring, eternity ring, cz diamond ring, minimalist jewelry, gift for her, wedding band, bridal jewelry, anniversary gift, eternity present, valentine gift","This elegant and dainty stacking ring is crafted from high-quality sterling silver or gold-plated metal, featuring a thin band adorned with cubic zirconia stones. Perfect as a standalone accessory or stacked with other rings for a minimalist yet stylish look. Excellent gift or present for her.
+
+💎 Material: Sterling Silver or Gold Plated. 
+
+💭 Sizes Available: 4-12. 
+
+🎁 Gift Packaging: Comes in a beautiful jewelry box, ready for gifting. 
+
+📌 Shipping & Processing: Ships within 1-3 business days"
+"Diamond Huggie Earrings, Gold Hoops, Minimalist Jewelry, Dainty Everyday Present, Sterling Silver Gift for Her","huggie earrings, gold hoops, diamond earrings, minimalist jewelry, dainty earrings, small hoop earrings, everyday earrings, gift for her, wedding jewelry, anniversary gift, bridesmaid gift, birthday gift, diamond gift","These stunning Diamond Huggie Earrings are designed for comfort and style. Crafted in high-quality sterling silver and plated with 18K gold, these dainty hoops feature a minimalist design perfect for everyday wear or special occasions. Great gift or present for her for any occasion.
+
+💎Material: 925 Sterling Silver, 18K Gold Plating. 
+
+📌 Size: 9mm Inner Diameter, 12.5mm Outer Diameter. 
+
+💭  Lightweight Design: Wear them all day without discomfort. 
+
+🎁 Packaging: Arrives in a beautiful gift box. 
+
+Shipping: Ready to ship in 1-2 business days."""
+"Llama Crochet Pattern, Low Sew, Amigurumi Plush Pattern, Lullaby Alpalca, Halo Animal, Tranquil Bloom, Digital Download","llama crochet, crochet pattern, low sew pattern, amigurumi plush, alpalca pattern, alpalca crochet, animal crochet, tranquil bloom, digital pattern, digital crochet, low sew animal, llama low sew, amigurumi craft","This Llama Low Sew Crochet Pattern Bundle is perfect for amigurumi enthusiasts looking for a delightful, easy-to-follow project. Featuring three charming llama designs—Lullaby, Halo, and Tranquil Bloom—this bundle includes detailed step-by-step instructions with photo references. 
+
+Skill Level: Beginner-friendly. 
+
+Size: Finished llama measures approximately 12cm (4.7 inches). 
+
+Digital Download: Instant access to the pattern in PDF format. 
+📌 Usage: Ideal for handmade gifts or craft fairs. 
+
+📌  Important: This is a crochet pattern, not a finished product. 
+
+If you have questions, feel free to message me!"
+"Personalized Watercolor House Portrait, Custom Homecoming Art, Housewarming Gift, Family Painting, New Homeowners Digital Print","housewarming gift, family home, custom home art, house sketch, digital watercolor, new home gift, home decor art, memory keepsake, digital painting, watercolor house, house portrait, homecoming art, custom homecoming","Celebrate the beauty of your home with a custom Personalized Watercolor House Portrait! This digital artwork transforms your favorite home photo into a stunning piece of art, perfect for housewarming gifts, family keepsakes, or new home celebrations. 
+
+⭐ How It Works: 1. Place your order & choose a size. 2. Send a clear photo of your home. 3. Provide a main text if desired. 4. Approve the final artwork before delivery. 
+
+Digital Download: This is a high-resolution digital file, no physical item will be shipped. 
+
+🎁 Perfect Gift Idea: Whether for a friend, family, or new homeowner, this custom house portrait makes for a thoughtful and meaningful gift. Feel free to message with any questions or custom requests!"
+"Sunbright Bell Pepper Seeds, Heirloom Yellow Sweet, Non-GMO, Open-Pollinated, Organic Gardening, 30 Seeds","heirloom seeds, capsicum annuum, bell pepper seeds, red bell pepper, yellow bell sweet, sunbright pepper, sunbright seeds, heirloom pepper, hot pepper, sunbright bell, organic garden, garden pepper, pepper seeds","Grow your own Sunbright Bell Peppers with these premium heirloom, non-GMO, open-pollinated seeds! This prolific variety produces sweet, blocky, yellow-orange peppers that mature to a rich red. Perfect for fresh eating, grilling, or adding to your favorite recipes. 
+
+📌  Growing Instructions: Start seeds indoors 8-12 weeks before the last frost under bright light. Transplant outdoors when temperatures remain warm. 
+
+📌  Harvest Time: 70-80 days. Plant Details: 2 feet tall, full sun. 
+
+📌  Shipping: Free shipping on orders over $35. 
+
+📌  Includes: 30 seeds per pack, full growing instructions provided"
+"Bella Canvas T-Shirt Mockup Bundle, BC 3001 Layflats, Digital Download, Real Model, Trendy Neutral Boho Aesthetic, Fall & Summer Shirt","mockup bundle, mockup t-shirt, t-shirt aesthetic, summer mockup, fall mockup, real model mockup, boho aesthetic, bella canvas mock, bella canvas bundle, bella canvas 3001, bc 3001 bundle, bella canvas, t-shirt mockup","This Bella Canvas 3001 T-shirt Mockup Bundle is the perfect way to showcase your designs with a cozy, trendy, boho aesthetic. Featuring real models and 24 high-resolution JPEG images, this bundle includes a variety of neutral, summer, and fall tones.
+
+⭐ What You Receive:
+✔ 24 High-Resolution JPEG Images (3000px x 3000px)
+✔ Colors: White, Black, Natural, Dark Grey, Maroon, Burnt Orange, Soft Pink, and more
+✔ Digital download available instantly after purchase
+✔ Free of logos and watermarks
+
+💭 How to Use:
+Download the images via Google Drive (link in PDF).
+Open in Canva, Photoshop, or Photopea.
+Overlay your design in PNG format.
+Adjust opacity for a natural look
+.
+📌 Important: This is a digital product only. No physical item will be shipped. For personal and commercial use (resale of images is not allowed). Final sale, no refunds."
+"Washington DC Flower Market Print, USA Poster, Botanical Wall Art, Modern Floral Poster, Digital Download, Printable Home Decor","washington poster dc, usa poster, washington dc, flower market, digital download, modern poster, printable poster, botanical print, modern wall art, wall decor, poster gift, home decor print, flower market print","🌸 Bring Floral Elegance to Your Home!
+Add a timeless touch of nature with this Washington DC Flower Market digital print. This botanical illustration blends modern design with vibrant floral artistry, making it a perfect wall decor piece for your home or office.
+
+🖼 What You Get:
+✔ High-resolution digital download in three premium size ratios
+✔ Crisp, detailed artwork that prints beautifully at home or professionally
+✔ Instant access after purchase—no waiting!
+
+💡 How It Works:
+
+Purchase the listing.
+Download your files instantly via Etsy.
+Print at home, at a local shop, or use an online printing service.
+🎁 Perfect for: Home decor, thoughtful gifts, or workspace enhancement. Enjoy the timeless beauty of flowers without worrying about fading—this artwork lasts forever in digital form!
+
+📌 Important: This is a digital file only. No physical item will be shipped."
+"Clay Pottery Kit for 2, DIY Highland Cow Crafting Bundle, Date Night Activity, Gift for Craft Lovers, Mother's Day & Birthday Present","highland cow, highland cow craft, gifts for her, christmas crafts, pottery gift, date night, clay pottery, highland cow, crafting bundle, kit for 2, diy cow craft, present for her, creative gift","🎨 Create Your Own Highland Cow with This Clay Pottery Kit for 2!
+This DIY craft kit is the perfect gift for craft lovers, couples' date nights, or creative birthday surprises. With step-by-step video guidance, crafting has never been easier!
+
+✨ What's Included:
+✔ 2 bags of high-quality air-dry clay (750g each)
+✔ 2 wooden tools & 1 loop tool for sculpting
+✔ 2 paintbrushes & a paint palette
+✔ Acrylic paints (Brown, Orange, White & Black)
+✔ Sealer to protect your finished piece
+
+🖌 How to Use:
+
+Follow the included video tutorial for guidance.
+Shape your adorable Highland cow with ease.
+Let the clay air-dry or fire it in a kiln.
+Seal and paint your masterpiece!
+
+🎁 Perfect for: Mother's Day, birthdays, Christmas, or a cozy date night activity.
+
+📌 Important: This kit includes everything you need for two people to craft. No kiln required, but it is kiln-safe for stoneware firing. Get creative today!"
+"Lace Maxi Bridal Robe with Slip, Adele Lace Robe, Wedding & Bridesmaid Gift, Elegant Bride & Honeymoon Present","wedding gifts, bridal robe, bride robe, bridesmaid robe, robe with slip, adele lace robe, lace maxi bridal, elegant bathrobe, wedding wrap, luxury bridal, wedding day, wedding day outfit, present for her","✨ Adele Lace Maxi Robe – The Ultimate Bridal Wrap
+
+Elevate your wedding morning with our best-selling Adele lace maxi robe, crafted from exclusive 3D floral embroidered lace. Designed for  presents for brides, bridesmaids, and honeymoon moments, this luxurious robe includes a matching satin slip for a complete, elegant look.
+
+💖 Features:
+✔ Sheer lace with delicate embroidered floral details
+✔ Plunging neckline & billowing elasticated sleeves for a romantic touch
+✔ Adjustable satin slip included for effortless styling
+✔ Detachable waist tie & front hook closure
+
+🎁 The Perfect Gift: Each robe arrives beautifully packaged in a ribbon-tied gift bag with an exclusive illustrated gift tag—ideal for brides, bridesmaids, and wedding gifts.
+
+📏 Sizing Guide (AU & US Sizing Included)
+XS/S: AU 6-8 | US 2-4
+S/M: AU 10-12 | US 6-8
+M/L: AU 14-16 | US 10-12
+L/XL: AU 18 | US 14
+
+🚚 Fast Shipping: Orders ship in 3-5 business days, with express options available for rush orders. Worldwide delivery in 2-4 business days."
+"Personalized Name Necklace, Custom Jewelry Gift for Her, Sterling Silver Necklace","custom jewelry, name necklace, gold necklace, sterling silver, jewelry for her, dainty jewelry, necklace for women, personalized gift, bridesmaid gift","A personal name necklace available in sterling silver, gold, or rose gold.  A great gift for special occasions. 
+
+Handmade with high-quality materials. 
+
+Comes in a gift box. 
+
+Ships within 6-10 business days."
+"Dainty Stacking Ring, Gold or Silver Ring, Minimalist Jewelry Gift, CZ Diamond Band","stacking ring, dainty jewelry, gold ring, silver ring, eternity ring, cz diamond ring, minimalist jewelry, gift for her, thin ring, sterling silver ring","Dainty stacking ring available in silver or gold. 
+
+Features a thin band with small cubic zirconia stones. 
+
+Comes in gift packaging. 
+
+Ships within 1-3 days."
+"Diamond Huggie Earrings, Small Gold Hoops, Minimalist Jewelry Gift","huggie earrings, gold hoop earrings, diamond earrings, minimalist jewelry, dainty earrings, everyday earrings, gift for her","Diamond Huggie Earrings made from sterling silver with gold plating. 
+
+A lightweight and stylish accessory for everyday wear. 
+
+Comes in a gift box. 
+
+Ships within 1-2 business days."
+"Llama Low Sew Crochet Pattern, Amigurumi Plush Pattern, Digital PDF Download","amigurumi crochet, plushie crochet, no sew crochet, crochet animal, digital pattern, handmade gift","- This is a digital crochet pattern for making a llama plush. 
+
+- Includes step by step written instructions with photo references. 
+
+- Available for instant download."
+"Watercolor House Portrait, Custom Home Art, Housewarming Gift, Digital Home Sketch","housewarming gift, family home, home portraits, custom home art, house sketch, digital watercolor, new home gift, home decor art","Turn your home into a custom watercolor portrait! A beautiful digital house painting, ideal for housewarming gifts or new homeowners. 
+
+Simply send a photo, and receive a stunning illustration. 
+
+Digital Download Only."
+"Sunbright Bell Pepper Seeds, Heirloom Yellow Sweet Pepper, Non-GMO, Open-Pollinated","organic seeds, heirloom seeds, garden seeds, capsicum annuum, hot pepper seeds, sweet pepper seeds, bell pepper seeds, vegetable seeds, yellow bell sweet, sunbright pepper","*Grow delicious your garden with these non GMO seeds! 
+
+*These peppers mature in 70 to 80 days and grow well in full sun. 
+
+*Includes 30 seeds per pack."
+"Bella Canvas T-Shirt Mockup Bundle, BC 3001, Digital Download, Boho Aesthetic T-Shirt","mockup bundle, t-shirt mockup, summer mockup, aesthetic t-shirt, fall mockup, real model mockup, bella canvas mock, bella canvas bundle, bella canvas 3001","This Bella Canvas 3001 shirt Mockup Bundle features real model photography. 
+
+You’ll receive:
+*24 pictures
+*JPEG format"""
+Washington DC Flower Market | Floral Poster | USA Botanical Print | Modern Wall Art | Digital Download,"washington dc poster, usa poster, flower market, digital download, printable poster, botanical print, modern wall art, wall decor, washington flowers, dc poster","This printable wall art is perfect for home decor.
+
+✔ What’s Included:
+
+3 High-resolution digital files in multiple aspect ratios
+Instant download after purchase
+Print at home or with a professional service
+📌 Note: Digital download only, no physical item will be shipped."
+"Clay Pottery Kit for 2, DIY Highland Cow Craft Kit, Fun Gift for Crafters, Date Night Activity","highland cow, gifts for her, pottery gift, date night, clay pottery kit, diy pottery kit, birthday gift, crafting kit present",🐄 DIY Highland Cow Pottery Kit for 2. This kit includes everything needed to sculpt and paint a Highland cow using air-dry clay or a kiln.
+"Lace Maxi Robe with Slip, Bridal & Bridesmaid Robe, Wedding Lace Robe, Bride Gift","wedding gifts, bridal robe, bridesmaid gifts, bride wrap, honeymoon gift, coverup outfit, lace robe for her, wrap for wedding, lace maxi robe, bridesmaid robe, slip robe","A maxi robe for the whole bridal party. Perfect for brides and bridesmaids, featuring delicate sheer lace, billowing sleeves, and a matching satin slip.
+
+✔ Features:
+Sheer lace with floral embroidery
+Adjustable satin slip included
+Detachable waist tie & hook closure
+Beautifully packaged, ready for gifting"
+Name Necklace Custom Name Gift Sterling Silver Necklace Name Jewelry,"jewelry, necklace, name necklace, personalized gift, sterling silver, custom name, gifts, birthday jewelry, dainty necklace",Custom necklace. Comes in a box. Ships in 6-10 days.
+Stacking Ring Gold Silver Ring Minimalist,"stacking ring, dainty jewelry, gold ring, silver ring, minimalist jewelry, thin ring, gift for her",Ring that features CZ stones. Available in sizes 4-12.
+Huggies Small Hoops Minimalist Jewelry Gift,"diamond earrings, minimalist jewelry, dainty earrings, huggie, gold hoops",Gold or silver huggie earrings with diamonds. Lightweight and stylish. Comes in a box.Comes in a gift box. Ships in 1-2 business days.
+Llama Crochet Pattern Low Sew Plush Pattern Amigurumi Digital PDF,"amigurumi crochet, plushie crochet, digital pattern, stuffed animal, crochet",Llama crochet pattern with simple instructions. This is a digital PDF download for a no sew plushie project. Great for beginner crocheters.
+Personalized Home Portrait Watercolor House Sketch Gift Digital Art,"housewarming gift, family home, home portraits, house sketch, new home gift, digital print, family",Custom house watercolor portrait from your photo. Perfect for housewarming gifts or home decor. Digital download only.
+Pepper Seeds Yellow Heirloom Non-GMO Sweet Pepper 30 Seeds,"pepper seeds, bell pepper, heirloom seeds, garden seeds, organic seeds, vegetable seeds, seeds pepper, seeds, pepper bell seed","Yellow Sunbright Bell Pepper seeds, non GMO and heirloom variety. 30 seeds per pack. Perfect for gardening. Matures in about 70 days."
+Bella Canvas T-Shirt Mockup Digital Bundle | BC 3001 | Boho Aesthetic,"t-shirt mockup, mockup bundle, aesthetic t-shirt, summer mockup, fall mockup, bella canvas 3001, mockup",Bella Canvas 3001 T-shirt mockup bundle with real models. Includes 24 high-resolution JPEG images with different color variations. Digital product only.
+Washington DC Printable | Floral Art Digital Download,"washington dc poster, digital download, botanical print, flower market, modern wall art, wall decor, poster download, poster, download","Instant download
+High-resolution file in 3 sizes
+Perfect for home decor or gifts"
+Highland Cow DIY Clay Kit | Pottery Kit for Two | Craft Gift Kit Idea | Great Present,"highland cow, clay, pottery, diy kit, craft kit, gifts for her, birthday","Create a highland cow from clay with this diy pottery kit!
+Includes air dry clay, tools, and paint
+Great for date nights or gifts
+Step by step video tutorial included"
+Lace Robe | Maxi Bridal Robe | Bride Robe | Wedding Robe with Slip,"bridal robe, wedding gifts, lace robe, bride robe, bridesmaid robe",A romantic lace maxi robe for weddings and honeymoons. Includes a matching satin slip and arrives gift ready. Ships worldwide in about 5 business days.
+Personalized Necklace Jewelry Necklace Necklace Gold Necklace Custom,"necklace, name, custom, gift, gold",Personalized name necklace
+Ring Stacking Ring Dainty Ring,"ring, stacking, jewelry, gold, silver, diamond",ring sizes 4 to 9
+Hoop Earrings Huggie Earrings Gold Earrings,"earrings, huggie, gold, diamond, jewelry, gift",Made from sterling silver with gold plating
+Llama Plush Llama PDF Llama Instructions,"llama, crochet, crochet pattern, llama pattern, crochet guide, pattern",Crochet pattern. Digital PDF download.
+Personal Painting of Your House,Personal Painting of Your House,Custom watercolor house. Digital download within a week. Great for gifts!
+Grow Your Own Garden,"pepper, seeds, vegetable, heirloom, organic, bell pepper, pepper seeds, heirloom seeds",30 in a pack
+T-Shirt Mockup T-Shirt Bundle 3001 T-Shirt Digital,"t-shirt, bundle, aesthetic, summer, fall, t-shirt summer",T-Shirt Mockup T-Shirt Bundle 3001 T-Shirt Digital
+Washington Flower Poster,"usa, botanical, wall art, print, usa print, usa wall art, print wall art",Printable art instantly!
+Clay DIY Kit DIY Pottery Highland Cow DIY Kit,"clay, pottery, diy, craft, gift",Includes everything you need! Ships within a week.
+Wrap for Wedding Day,"robe, lace, bride, bridesmaid, bridal",Includes a satin slip and a detachable waist tie. No returns.
+
+================
+File: example-input-2.csv
+================
+Title,Tags,Description
+"Handmade Ceramic Mug, Coffee Cup - Modern Pottery Gift","handmade ceramic mug,coffee cup,modern pottery,unique gift,kitchen decor,housewarming gift,tea cup,ceramic,pottery,mug,gift,cup,drinkware","This handmade ceramic mug is perfect for your morning coffee or afternoon tea. Each piece is handcrafted with care and attention to detail, making it a unique addition to your kitchen.
+
+• Made from high-quality stoneware clay
+• Microwave and dishwasher safe
+• Holds approximately 12oz
+• Dimensions: 3.5"" tall x 3"" diameter
+
+This modern pottery piece makes a wonderful housewarming gift or present for the coffee lover in your life. The minimalist design complements any kitchen decor style."
+"Personalized Leather Journal | Custom Notebook - Anniversary Gift","personalized journal,leather notebook,custom journal,anniversary gift,personalized gift,leather diary,travel journal,bullet journal,sketchbook,writing journal,graduation gift,leather gift,monogram","Treasure your thoughts and memories in this beautiful personalized leather journal. Each notebook is handcrafted using genuine leather that develops a rich patina over time.
+
+✓ Customized with your name, initials, or a short message
+✓ Premium 100-page acid-free paper (200 pages front & back)
+✓ Available in multiple colors: Brown, Black, Cognac, Burgundy
+✓ Dimensions: 8.5"" x 5.5"" - perfect for carrying in your bag
+
+This custom leather notebook makes a thoughtful anniversary gift, graduation present, or personal treat. Use it as a daily planner, bullet journal, sketchbook, travel diary, or writing journal. 
+
+🎁 Ships in a gift box ready for giving!"
+"Minimalist Wall Art Print Set of 3, Black and White Abstract Posters","wall art set,minimalist print,black and white art,abstract print,gallery wall,living room decor,wall decor,modern art,printable wall art,abstract poster,office decor,scandinavian art,wall prints","Create a stylish gallery wall with this set of 3 minimalist black and white abstract prints. These modern art posters add sophistication to any space with their clean lines and timeless design.
+
+What's included:
+• 3 high-quality digital art prints
+• Multiple size options from 5x7"" to 24x36""
+• Printed on premium 230gsm matte paper
+• Archival-quality inks for long-lasting color
+
+🖼️ FRAMES NOT INCLUDED - these are prints only
+
+These versatile wall prints work beautifully in living rooms, bedrooms, offices, or entryways. The minimalist black and white aesthetic coordinates effortlessly with any decor style from Scandinavian to modern to classic.
+
+Simply download, print, and transform your space with this elegant wall art set!"
+"Handmade Scented Soy Candles | Eco-friendly Home Fragrance 🕯️","soy candles,handmade candle,scented candle,eco friendly,aromatherapy,home fragrance,vegan candle,gift for her,relaxation gift,self care,natural candle,home decor,environmentally friendly","Fill your home with delightful fragrance with our handmade soy candles! Made with 100% natural soy wax, cotton wicks, and premium essential oil blends for a clean, long-lasting burn.
+
+✨ Available scents:
+• Lavender & Sage - Calming and herbaceous
+• Vanilla & Cinnamon - Warm and comforting
+• Fresh Linen - Clean and airy
+• Eucalyptus & Mint - Refreshing and invigorating
+
+Each candle features:
+• 40+ hour burn time
+• Eco-friendly soy wax from U.S. grown soybeans
+• Zero paraffin, phthalates, or petroleum
+• Reusable and recyclable container
+
+Our environmentally friendly candles make perfect gifts for relaxation, self-care packages, or adding ambiance to your home decor. Every candle is hand-poured in small batches to ensure quality and attention to detail.
+
+💚 Vegan | Cruelty-free | Sustainable"
+
+================
+File: examples.json
+================
+[
+  {
+    "name": "Silver Earrings - Perfect Score Example",
+    "title": "Handmade Silver Earrings, Dangle Earrings, Sterling Silver Jewelry, Minimalist Earrings, Boho Earrings, Gift for Her",
+    "tags": [
+      "handmade silver earrings",
+      "sterling silver jewelry",
+      "minimalist dangle earrings",
+      "boho style jewelry",
+      "gift for her jewelry",
+      "bohemian silver dangles",
+      "modern silver earrings",
+      "unique handcrafted jewelry",
+      "artisan silver earrings",
+      "statement silver jewelry",
+      "elegant dangle earrings",
+      "handmade silver accessories",
+      "contemporary silver pieces"
+    ],
+    "description": "These elegant handmade silver earrings are crafted with precision and care, making them the perfect addition to your jewelry collection.\n\n• Made from genuine sterling silver\n• Lightweight and comfortable for all-day wear\n• Unique handcrafted design ensures no two pairs are exactly alike\n• Approximately 1.5 inches in length\n• Comes in a beautiful gift box ready for giving\n\nThese minimalist dangle earrings feature a modern, boho design that complements any outfit, from casual to formal wear. The sterling silver catches the light beautifully, adding a subtle sparkle to your look.\n\nPerfect as a gift for her on any special occasion - birthdays, anniversaries, holidays, or just because. These versatile earrings will quickly become a favorite in her jewelry collection.\n\nEach pair of earrings is handcrafted in my studio, ensuring attention to detail and quality craftsmanship that mass-produced jewelry simply cannot match.",
+    "score": {
+      "title": 4.0,
+      "tags": 4.0,
+      "description": 4.0,
+      "overall": 4.0
+    }
+  },
+  {
+    "name": "Leather Journal - Perfect Score Example",
+    "title": "Personalized Leather Journal, Custom Notebook, Handmade Sketchbook, Travel Diary, Anniversary Gift, Graduation Gift",
+    "tags": [
+      "personalized leather journal",
+      "custom leather notebook",
+      "handmade leather sketchbook",
+      "travel writing journal",
+      "anniversary gift notebook",
+      "graduation gift journal",
+      "leather bound sketchbook",
+      "customized writing diary",
+      "hand stitched leather book",
+      "personalized name journal",
+      "vintage style leather diary",
+      "professional writing notebook",
+      "artisan leather sketchbook"
+    ],
+    "description": "This beautiful personalized leather journal is handcrafted with love and attention to detail, making it a truly special keepsake.\n\n• Made from genuine full-grain leather that ages beautifully\n• Available in brown, black, or rustic tan colors\n• Customized with name, initials, or short message of your choice\n• Contains 200 pages (100 sheets) of premium acid-free paper\n• Measures 5.5\" x 8.5\" - perfect for carrying in a bag or backpack\n• Securely bound with traditional hand-stitching techniques\n\nThis custom notebook is ideal for sketching, journaling, or writing down your thoughts during your travels. The leather cover develops a beautiful patina over time, making each journal uniquely yours as it ages.\n\nMakes a thoughtful and lasting anniversary gift, graduation present, or special surprise for anyone who appreciates fine craftsmanship and personalized touches. The hand-stitched binding allows the journal to lay flat when open, making writing a joy.\n\nEach leather journal is handmade in my workshop, ensuring quality and attention to detail that mass-produced notebooks simply cannot match.",
+    "score": {
+      "title": 4.0,
+      "tags": 4.0,
+      "description": 4.0,
+      "overall": 4.0
+    }
+  }
+]
+
+================
+File: examples.txt
+================
+# Perfect Score (4.0/4.0) Etsy Listing Examples
+
+## Example 0: Ceramic Mug
+
+Title:
+Handmade Ceramic Mug, Coffee Cup, Modern Pottery Unique Gift for Her, Cozy Kitchen Decor, Housewarming Present, Tea Cup
+
+Tags:
+handmade ceramic mug, coffee cup, modern pottery, unique gift, gift for her, cozy kitchen decor, housewarming present, tea cup, stoneware, minimal design, artisan pottery, handcrafted mug, ceramic drinkware
+
+Description:
+This handmade ceramic mug is perfect for your morning coffee or afternoon tea. Each piece is handcrafted with care and attention to detail, making it a unique addition to your kitchen.
+
+• Made from high-quality stoneware clay
+• Microwave and dishwasher safe
+• Holds approximately 12oz
+• Dimensions: 3.5" tall x 3" diameter
+
+This modern pottery piece makes a wonderful housewarming gift or present for the coffee lover in your life. The minimalist design complements any kitchen decor style.
+
+## Example 1: Silver Jewelry
+
+Title:
+Handmade Silver Pendant, Dangle Necklace, Sterling Silver Jewelry, Minimalist Design, Boho Style, Gift for Her
+
+Tags:
+
+Focus Keywords (tags that EXACTLY match or are contained within first 60 characters):
+dangle necklace, silver pendant, sterling silver, handmade silver
+
+Additional Tags:
+minimalist design, boho style, gift for her, modern jewelry, bohemian jewelry, artisan jewelry, handcrafted jewelry, silver accessories, everyday jewelry
+
+All Tags (comma-separated for copying):
+dangle necklace, silver pendant, sterling silver, handmade silver, minimalist design, boho style, gift for her, modern jewelry, bohemian jewelry, artisan jewelry, handcrafted jewelry, silver accessories, everyday jewelry
+
+Description:
+This elegant handmade silver pendant necklace is crafted with precision and care, making it the perfect addition to your jewelry collection.
+
+• Made from genuine sterling silver
+• Lightweight and comfortable for all-day wear
+• Unique handcrafted design ensures no two pieces are exactly alike
+• Pendant measures approximately 1.5 inches in length
+• Comes in a beautiful gift box ready for giving
+
+This minimalist dangle necklace features a modern, boho style that complements any outfit, from casual to formal wear. The sterling silver catches the light beautifully, adding a subtle sparkle to your look.
+
+Perfect as a gift for her on any special occasion - birthdays, anniversaries, holidays, or just because. This versatile silver pendant will quickly become a favorite in her jewelry collection.
+
+Each piece is handcrafted in my studio, ensuring attention to detail and quality craftsmanship that mass-produced jewelry simply cannot match.
+
+
+## Example 2: Leather Journal
+
+Title:
+Personalized Leather Journal, Custom Notebook, Handmade Sketchbook, Travel Diary, Anniversary Gift, Graduation Gift
+
+Tags:
+
+Focus Keywords (tags that EXACTLY match or are contained within first 60 characters):
+leather journal, custom notebook
+
+Additional Tags:
+travel diary, anniversary gift, graduation gift, writing journal, personalized gift, leather bound, hand stitched, vintage journal, leather notebook
+
+All Tags (comma-separated for copying):
+leather journal, custom notebook, travel diary, anniversary gift, graduation gift, writing journal, personalized gift, leather bound, hand stitched, vintage journal, leather notebook, handmade journal, personalized notebook
+
+Description:
+This beautiful personalized leather journal is handcrafted with love and attention to detail, making it a truly special keepsake.
+
+• Made from genuine full-grain leather that ages beautifully
+• Available in brown, black, or rustic tan colors
+• Customized with name, initials, or short message of your choice
+• Contains 200 pages (100 sheets) of premium acid-free paper
+• Measures 5.5" x 8.5" - perfect for carrying in a bag or backpack
+• Securely bound with traditional hand-stitching techniques
+
+This custom notebook is ideal for sketching, journaling, or writing down your thoughts during your travels. The leather cover develops a beautiful patina over time, making each journal uniquely yours as it ages.
+
+Makes a thoughtful and lasting anniversary gift, graduation present, or special surprise for anyone who appreciates fine craftsmanship and personalized touches. The hand-stitched binding allows the journal to lay flat when open, making writing a joy.
+
+Each leather journal is handmade in my workshop, ensuring quality and attention to detail that mass-produced notebooks simply cannot match.
+
+================
+File: framework.txt
+================
+Complete Etsy Scoring Framework + Criteria
+
+## Definitions
+- Separator: A character or sequence used to divide keywords in a title (comma, pipe " | ", dash " - ")
+- Focus Keywords: Important keywords from tags that appear in the title
+- Multi-word Tag: A tag containing more than one word (separated by spaces)
+- Low Quality Tag: A tag with fewer than 10 characters AND fewer than 3 words
+- Tag Diversity: Ratio of unique words to total words across all tags
+Overall Grade Calculation
+Overall score = (Title score × 0.40) + (Tag score × 0.40) + (Description score × 0.20)
+Scoring Scale:
+4: 3.5–4.0 (A-equivalent)
+3: 2.5–3.49 (B-equivalent)
+2: 1.5–2.49 (C-equivalent) 
+1: Below 1.5 (D/F-equivalent)
+Title Scoring (1-4 points)
+Character Count (1.2 points)
+Definition: Total number of characters in the title
+Scoring:
+70-140 characters: 1.2  points
+50-69 characters: 0.6 points
+<50 or >140 characters: 0.3 points
+Focus keywords in first 60 Characters (1.2 points)
+Definition: Each tag keyword found in the first 60 characters (ignoring punctuation/separators)
+Scoring: 0.3 points per tag (up to 1.2 points)
+Updated [03/27/2025]
+Keyword Redundancy (0.8 points)
+Definition: Abnormal repetition of words or phrases
+Scoring:
+No words repeated more than twice (0.8 points)
+Any word repeated 3+ times results in 0 points for this category
+This is an all-or-nothing score with no partial credit
+Structural Elements (0.8 points)
+Definition: Use of separators (commas, pipes " | ", dashes " - ")
+Scoring: 
+2+ separators: 0.8 points
+1 separator: 0.4 points
+0 separators: 0.2 points
+Updated [03/27/2025]
+
+Tag Scoring (1-4 points)
+Tag Count (1.0 point)
+Definition: Total number of tags used
+Scoring: (Number of tags / 13) × 1
+Multi-word Tag Ratio (1.0 point)
+Definition: Percentage of tags containing multiple words (separated by spaces)
+Score = ratio of multi-word tags to total tags
+Higher percentage of multi-word tags receives better scores
+Scoring: (Number of multi-word tags / Total tags)
+Tag Quality (1.0 point)
+Low quality tags: less than 10 characters AND fewer than 3 words
+No low quality tags (1.0 point)
+Presence of at least 1 low quality tag (0.5 point)
+More than 1 low quality tag (0.0 points)
+
+
+Tag Diversity (1.0 point)
+Definition: Measures unique words across all tags
+Scoring:
+≥0.8 (80%) ratio: 1.0 point
+0.6-0.79 (60-79%) ratio: 0.75 points
+0.4-0.59 (40-59%) ratio: 0.5 points
+<0.4 ratio (less than 40%): 0.25 points
+`
+Description Scoring (1-4)
+On Etsy, product descriptions can be up to 102,400 characters, but the first 160 characters are most visible, so prioritize keywords there.
+Length and Detail (1.2 points)
+Definition: Total word count in description
+Scoring:
+160+ characters
+100-159 words: 0.9 points
+50-99 words: 0.6 points
+<50 
+Structural Formatting (1.2 points)
+Definition: Use of formatting elements for readability
+Presence of any of these list formats:
+- Bullet points (•, *, +)
+- Hyphens at the beginning of a line or after a line break
+- Numbered lists (1., 2., etc.)
+- Lettered lists (a), b), a., b., etc.)
+- Lines starting with "+ " format (e.g., "+ Shipped FAST & FREE")
+- Emoji and symbol list markers (all Unicode emoji and symbols like ✅, ✔, ☑, ✓, ➢, ◦, +, etc.)
+Note: Hyphens within words (e.g., "sister-in-law") are not counted as list formatting
+This is an all or nothing score; full points if list elements are present, zero if not
+
+
+Keyword Integration (1.6 points)
+Definition: Inclusion of keywords from title in description
+Scoring: (total count keyword found in description / total count of keywords in title) × 1.6
+Higher % of title keywords appearing in description gets better score
+
+================
+File: index copy.html
+================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etsy Listing Score Tester</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #222;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+            }
+            .input-section, .results-section {
+                width: 50%;
+            }
+        }
+        .input-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .results-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+        textarea {
+            min-height: 120px;
+        }
+        button {
+            background-color: #F56400;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #E05800;
+        }
+        .score-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .score-header h3 {
+            margin: 0;
+        }
+        .score-value {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+        }
+        .grade-A {
+            background-color: #4CAF50;
+        }
+        .grade-B {
+            background-color: #8BC34A;
+        }
+        .grade-C {
+            background-color: #FFC107;
+        }
+        .grade-D {
+            background-color: #F44336;
+        }
+        .score-details {
+            margin-top: 10px;
+        }
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .score-item:last-child {
+            border-bottom: none;
+        }
+        .recommendations {
+            background-color: #FFF8E1;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .highlight {
+            background-color: #9C27B0;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+      
+        .pill-recommendation {
+            background-color: #E8EAF6;
+            color: #3F51B5;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px;
+            display: inline-block;
+            border: 1px solid #C5CAE9;
+        }
+        .recommendations h4 {
+            margin-top: 0;
+            color: #795548;
+        }
+        .recommendations ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .tag {
+            background-color: #eee;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .tag button {
+            background: none;
+            border: none;
+            color: #999;
+            margin: 0 0 0 5px;
+            padding: 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #tagInput {
+            width: calc(100% - 220px);
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .add-tag-btn {
+            width: 100px;
+            display: inline-block;
+            margin: 0;
+            padding: 10px;
+        }
+        .clear-tags-btn, .copy-tags-btn {
+            background-color: #ddd;
+            color: #333;
+            width: 100px;
+            display: inline-block;
+            margin: 10px 0 0 0;
+            padding: 10px;
+        }
+        .copy-tags-btn {
+            background-color: #f0f0f0;
+            margin-left: 10px;
+        }
+        .sample-btn {
+            background-color: #ddd;
+            color: #333;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Etsy Listing Score Tester</h1>
+    
+    <p>This tool analyzes your Etsy listing based on Etsy's actual scoring algorithms. Enter your listing details below to get a score between 1-4 and specific recommendations for improvement.</p>
+    
+    <div class="container">
+        <div class="input-section">
+            <h2>Enter Your Listing Details</h2>
+            
+            <label for="titleInput"><strong>Title</strong></label>
+            <textarea id="titleInput" placeholder="Enter your Etsy listing title..."></textarea>
+            
+            <label><strong>Tags</strong> (max 13)</label>
+            <div class="tag-container" id="tagContainer"></div>
+            
+            <div>
+                <input type="text" id="tagInput" placeholder="Add a tag or comma-separated tags...">
+                <button id="addTagBtn" class="add-tag-btn">Add Tag</button>
+                <button id="clearTagsBtn" class="clear-tags-btn">Clear All</button>
+                <button id="copyTagsBtn" class="copy-tags-btn">Copy CSV</button>
+            </div>
+            
+            <label for="descriptionInput"><strong>Description</strong></label>
+            <textarea id="descriptionInput" rows="8" placeholder="Enter your Etsy listing description..."></textarea>
+            
+            <button id="analyzeBtn">Analyze Listing</button>
+            <button id="sampleBtn" class="sample-btn">Load Sample Data</button>
+        </div>
+        
+        <div class="results-section">
+            <h2>Analysis Results</h2>
+            <div id="resultsContainer">
+                <p>Enter your listing details and click "Analyze Listing" to see results.</p>
+            </div>
+        </div>
+    </div>
+
+   <script src="etsygrade.js"></script>
+</body>
+</html>
 
 ================
 File: index.html
@@ -745,1478 +2345,854 @@ File: index.html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Etsy Listing Optimizer</title>
-    <style>
-        :root {
-            --etsy-orange: #F56400;
-            --etsy-hover: #E55400;
-            --etsy-light: #FFF3ED;
-            --gray-light: #f5f5f5;
-            --gray-med: #e0e0e0;
-            --gray-dark: #767676;
-            --success-green: #4CAF50;
-            --warning-orange: #FFC107;
-        }
-        
-        * {
-            box-sizing: border-box;
-            font-family: 'Graphik Webfont', -apple-system, 'Helvetica Neue', 'Droid Sans', Arial, sans-serif;
-        }
-        
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f7f7f7;
-            color: #222;
-            line-height: 1.4;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            background-color: white;
-            border-bottom: 1px solid var(--gray-med);
-            padding: 15px 0;
-        }
-        
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--etsy-orange);
-            text-decoration: none;
-            margin-left: 20px;
-        }
-        
-        main {
-            display: flex;
-            flex-wrap: wrap;
-            margin-top: 30px;
-            gap: 20px;
-        }
-        
-        .input-section {
-            flex: 1 1 100%;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            margin-bottom: 20px;
-        }
-        
-        .results-section {
-            flex: 1 1 100%;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        
-        .score-cards {
-            flex: 1 1 300px;
-        }
-        
-        .improvements {
-            flex: 2 1 600px;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            margin-bottom: 20px;
-        }
-        
-        h1, h2, h3 {
-            margin-top: 0;
-            color: #222;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        textarea, input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--gray-med);
-            border-radius: 6px;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        
-        textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-        
-        .tags-input {
-            display: flex;
-            flex-wrap: wrap;
-            border: 1px solid var(--gray-med);
-            border-radius: 6px;
-            padding: 8px;
-            margin-bottom: 15px;
-            min-height: 48px;
-        }
-        
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            background: var(--etsy-light);
-            color: var(--etsy-orange);
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin: 4px;
-            font-size: 14px;
-        }
-        
-        .tag-delete {
-            margin-left: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .tags-input input {
-            flex: 1;
-            border: none;
-            outline: none;
-            padding: 8px;
-            font-size: 14px;
-            min-width: 120px;
-        }
-        
-        .button {
-            background-color: var(--etsy-orange);
-            color: white;
-            border: none;
-            border-radius: 24px;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .button:hover {
-            background-color: var(--etsy-hover);
-        }
-        
-        .score {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            padding: 15px;
-            border-radius: 6px;
-            background-color: var(--gray-light);
-        }
-        
-        .score-label {
-            font-weight: 500;
-        }
-        
-        .score-value {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .score-card {
-            margin-bottom: 10px;
-        }
-        
-        .score-details {
-            margin-top: 5px;
-            font-size: 14px;
-            color: var(--gray-dark);
-        }
-        
-        .grade-a {
-            background-color: #DCEDC8;
-        }
-        
-        .grade-b {
-            background-color: #FFF9C4;
-        }
-        
-        .grade-c {
-            background-color: #FFE0B2;
-        }
-        
-        .grade-d {
-            background-color: #FFCCBC;
-        }
-        
-        .compare-fields {
-            display: flex;
-            margin-bottom: 20px;
-            gap: 20px;
-        }
-        
-        .field-column {
-            flex: 1;
-        }
-        
-        .field-label {
-            font-weight: 500;
-            margin-bottom: 5px;
-            display: block;
-        }
-        
-        .field-content {
-            padding: 15px;
-            background: var(--gray-light);
-            border-radius: 6px;
-            min-height: 100px;
-            margin-bottom: 10px;
-            white-space: pre-wrap;
-        }
-        
-        .use-improved {
-            font-size: 14px;
-            color: var(--etsy-orange);
-            text-decoration: underline;
-            cursor: pointer;
-            display: inline-block;
-            margin-bottom: 15px;
-        }
-        
-        .improvement-note {
-            color: var(--gray-dark);
-            font-size: 14px;
-            font-style: italic;
-            margin-bottom: 10px;
-        }
-        
-        .tag-count {
-            color: var(--gray-dark);
-            font-size: 14px;
-            margin-top: 5px;
-        }
-        
-        .loading {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 100;
-        }
-        
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--gray-med);
-            border-top: 4px solid var(--etsy-orange);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .help-tip {
-            font-size: 14px;
-            color: var(--gray-dark);
-            margin-bottom: 10px;
-        }
-        
-        .error-message {
-            color: #F44336;
-            font-weight: bold;
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: #FFEBEE;
-        }
-        
-        .feedback-message {
-            background-color: #FFF3ED;
-            color: #E55400;
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin-top: 5px;
-            margin-bottom: 10px;
-            border-left: 4px solid #F56400;
-        }
-        
-        .feedback-success {
-            background-color: #E8F5E9;
-            border-left: 4px solid #4CAF50;
-            color: #1B5E20;
-        }
-        
-        .secondary-button {
-            background-color: #FFFFFF;
-            color: var(--etsy-orange);
-            border: 1px solid var(--etsy-orange);
-            border-radius: 24px;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-right: 10px;
-            margin-top: 5px;
-        }
-        
-        .secondary-button:hover {
-            background-color: var(--etsy-light);
-        }
-        
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--gray-med);
-        }
-        
-        .tab {
-            padding: 12px 24px;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            font-weight: 500;
-        }
-        
-        .tab.active {
-            border-bottom-color: var(--etsy-orange);
-            color: var(--etsy-orange);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        @media (max-width: 768px) {
-            .compare-fields {
-                flex-direction: column;
-            }
-        }
-    </style>
+    <title>Etsy Listing Score Tester</title>
+   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <a href="#" class="logo">Etsy Listing Optimizer</a>
-    </header>
+    <h1>Etsy Listing Score Tester</h1>
+    
+    <p>This tool analyzes your Etsy listing based on Etsy's actual scoring algorithms. Enter your listing details below to get a score between 1-4 and specific recommendations for improvement.</p>
     
     <div class="container">
-        <main>
-            <section class="input-section">
-                <h1>Optimize Your Etsy Listing</h1>
-                <p>Enter your listing details below to receive personalized optimization suggestions based on Etsy's search algorithm.</p>
-                
-                <div class="tabs">
-                    <div class="tab active" data-tab="single">Single Listing</div>
-                    <div class="tab" data-tab="batch">Batch Optimizer</div>
-                </div>
-                
-                <div class="tab-content active" id="single-tab">
-                    <form id="optimizer-form">
-                        <div class="api-key-section">
-                            <label for="api-key">OpenAI API Key:</label>
-                            <input type="text" id="api-key" placeholder="Enter your OpenAI API Key">
-                            <p>Your API key is stored only in your browser and is never sent to our servers.</p>
-                        </div>
-                        
-                        <div>
-                            <label for="title">Product Title:</label>
-                            <textarea id="title" placeholder="Enter your product title here...">Vintage Persian Runner Boho Pink Rug Handmade, Geometric Tribal Oriental Turkish Carpet, Bohemian Wool Hallway Entry Decor Small Area Mat</textarea>
-                            <div class="help-tip">Character count: <span id="title-count">0</span>/140 (100-140 characters recommended)</div>
-                            <div class="feedback-message hidden" id="title-feedback"></div>
-                            <button type="button" id="title-only-btn" class="secondary-button">Optimize Title Only</button>
-                        </div>
-                        
-                        <div>
-                            <label for="tags">Tags (max 13):</label>
-                            <div class="tags-input" id="tags-container">
-                                <input type="text" id="tag-input" placeholder="Type a tag and press Enter...">
-                            </div>
-                            <div class="tag-count"><span id="tag-count">0</span>/13 tags used</div>
-                            <div class="feedback-message hidden" id="tags-feedback"></div>
-                            <button type="button" id="tags-only-btn" class="secondary-button">Optimize Tags Only</button>
-                        </div>
-                        
-                        <div>
-                            <label for="description">Product Description:</label>
-                            <textarea id="description" placeholder="Enter your product description here..."></textarea>
-                            <div class="feedback-message hidden" id="description-feedback"></div>
-                            <button type="button" id="description-only-btn" class="secondary-button">Optimize Description Only</button>
-                        </div>
-                        
-                        <div class="error-message hidden" id="error-display"></div>
-                        
-                        <button type="submit" class="button">Analyze & Optimize All</button>
-                    </form>
-                </div>
-                
-                <div class="tab-content" id="batch-tab">
-                    <p>Upload a CSV file with multiple listings to analyze and optimize in bulk.</p>
-                    <input type="file" id="batch-file" accept=".csv">
-                    <div class="help-tip">CSV should have columns for: title, tags, description</div>
-                    <button class="button" id="batch-analyze">Upload & Analyze</button>
-                </div>
-            </section>
+        <div class="input-section">
+            <h2>Enter Your Listing Details</h2>
             
-            <section class="results-section hidden" id="results">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                </div>
-                
-                <div class="score-cards">
-                    <div class="card">
-                        <h2>Listing Scores</h2>
-                        
-                        <div class="score grade-b">
-                            <div class="score-label">Overall Grade</div>
-                            <div class="score-value">3.0/4.0</div>
-                        </div>
-                        
-                        <div class="score-card">
-                            <div class="score-label">Title Score</div>
-                            <div class="score-value">2.8/4.0</div>
-                            <div class="score-details">
-                                <div>✓ Character Count: 1.2/1.2</div>
-                                <div>✗ Focus Keywords: 0/1.2</div>
-                                <div>✓ Keyword Stuffing: 0.8/0.8</div>
-                                <div>✓ Structure: 0.8/0.8</div>
-                            </div>
-                        </div>
-                        
-                        <div class="score-card">
-                            <div class="score-label">Tags Score</div>
-                            <div class="score-value">3.0/4.0</div>
-                            <div class="score-details">
-                                <div>✓ Tag Count: 1.0/1.0</div>
-                                <div>✓ Multi-word Tags: 1.0/1.0</div>
-                                <div>✗ Chain Structure: 0.5/1.0</div>
-                                <div>✓ Diversity: 0.5/1.0</div>
-                            </div>
-                        </div>
-                        
-                        <div class="score-card">
-                            <div class="score-label">Description Score</div>
-                            <div class="score-value">3.2/4.0</div>
-                            <div class="score-details">
-                                <div>✓ Length: 1.2/1.2</div>
-                                <div>✓ Formatting: 0.8/0.8</div>
-                                <div>✓ Keyword Integration: 1.2/1.6</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="improvements">
-                    <div class="card">
-                        <h2>Optimization Suggestions</h2>
-                        
-                        <h3>Title</h3>
-                        <div class="compare-fields">
-                            <div class="field-column">
-                                <span class="field-label">Original Title</span>
-                                <div class="field-content" id="original-title">Vintage Persian Runner Boho Pink Rug Handmade, Geometric Tribal Oriental Turkish Carpet, Bohemian Wool Hallway Entry Decor Small Area Mat</div>
-                            </div>
-                            <div class="field-column">
-                                <span class="field-label">Improved Title</span>
-                                <div class="field-content" id="improved-title">Vintage Persian Runner Boho Pink Rug Handmade | Geometric Tribal Oriental Turkish Carpet | Bohemian Wool Hallway Entry Decor Small Area Mat</div>
-                                <a class="use-improved" id="use-title">Use this improved title</a>
-                            </div>
-                        </div>
-                        <div class="improvement-note">Changed commas to pipes (|) for better visual separation and improved readability.</div>
-                        
-                        <h3>Tags</h3>
-                        <div class="compare-fields">
-                            <div class="field-column">
-                                <span class="field-label">Original Tags</span>
-                                <div class="field-content" id="original-tags">No tags provided</div>
-                            </div>
-                            <div class="field-column">
-                                <span class="field-label">Improved Tags</span>
-                                <div class="field-content" id="improved-tags">vintage rug, persian runner, boho decor, pink rug, handmade carpet, geometric rug, tribal carpet, oriental runner, turkish rug, bohemian decor, wool rug, hallway runner, area mat</div>
-                                <a class="use-improved" id="use-tags">Use these improved tags</a>
-                            </div>
-                        </div>
-                        <div class="improvement-note">Created multi-word tags with better chain structure and increased specificity. All 13 tag slots utilized.</div>
-                        
-                        <h3>Description</h3>
-                        <div class="compare-fields">
-                            <div class="field-column">
-                                <span class="field-label">Original Description</span>
-                                <div class="field-content" id="original-description">No description provided</div>
-                            </div>
-                            <div class="field-column">
-                                <span class="field-label">Improved Description</span>
-                                <div class="field-content" id="improved-description">This beautiful vintage Persian runner is a handmade masterpiece that adds bohemian charm to any space. The pink hues create a warm, inviting atmosphere in your home.
-
-**Features:**
-* Authentic handcrafted Persian runner with geometric tribal patterns
-* Vibrant pink color with bohemian aesthetic
-* Made from 100% natural wool for durability and warmth
-* Perfect size for hallways, entryways, or as an accent piece
-* Unique Oriental Turkish carpet design with rich cultural heritage
-* Each rug is handmade, ensuring a one-of-a-kind addition to your home
-
-**Dimensions:** [Add your specific dimensions here]
-
-**Care Instructions:**
-* Vacuum regularly on low setting without beater bar
-* For spills, blot immediately with clean white cloth
-* Professional cleaning recommended for deep cleaning
-* Rotate periodically to ensure even wear
-
-**Perfect for:** Adding a touch of elegance to your hallway, entry, or any space needing a pop of color and artistic flair. These vintage-inspired rugs make excellent gifts for new homeowners, boho decor enthusiasts, or anyone appreciating handcrafted textiles.
-
-*Note: Due to the handmade nature of this product, slight variations in color and pattern may occur, making each piece uniquely yours.*</div>
-                                <a class="use-improved" id="use-description">Use this improved description</a>
-                            </div>
-                        </div>
-                        <div class="improvement-note">Created a comprehensive description with optimal length, formatting elements (paragraphs, bullet points), and proper keyword integration from the title.</div>
-                        
-                        <button class="button" id="save-all">Save All Improvements</button>
-                    </div>
-                </div>
-            </section>
-        </main>
+            <label for="titleInput"><strong>Title</strong></label>
+            <textarea id="titleInput" placeholder="Enter your Etsy listing title..."></textarea>
+            
+            <label><strong>Tags</strong> (max 13)</label>
+            <div class="tag-container" id="tagContainer"></div>
+            
+            <div>
+                <input type="text" id="tagInput" placeholder="Add a tag or comma-separated tags...">
+                <button id="addTagBtn" class="add-tag-btn">Add Tag</button>
+                <button id="clearTagsBtn" class="clear-tags-btn">Clear All</button>
+                <button id="copyTagsBtn" class="copy-tags-btn">Copy CSV</button>
+            </div>
+            
+            <label for="descriptionInput"><strong>Description</strong></label>
+            <textarea id="descriptionInput" rows="8" placeholder="Enter your Etsy listing description..."></textarea>
+            
+            <button id="analyzeBtn">Analyze Listing</button>
+            <button id="sampleBtn" class="sample-btn">Load Sample Data</button>
+            
+            <div class="tools-section">
+                <h3>Additional Tools</h3>
+                <a href="title-guide.html" class="tool-link">
+                    <span class="tool-name">Title Optimizer</span> - Create better titles with perfect keyword placement
+                </a>
+                <a href="batch-processor.html" class="tool-link">
+                    <span class="tool-name">Batch CSV Analyzer</span> - Process multiple listings at once from a CSV file
+                </a>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <h2>Analysis Results</h2>
+            <div id="resultsContainer">
+                <p>Enter your listing details and click "Analyze Listing" to see results.</p>
+            </div>
+        </div>
     </div>
-    
-    <script>
-        // Simple interactive functionality for demo purposes
-        document.addEventListener('DOMContentLoaded', function() {
-            // Character counter for title
-            const titleField = document.getElementById('title');
-            const titleCount = document.getElementById('title-count');
-            
-            function updateTitleCount() {
-                const count = titleField.value.length;
-                titleCount.textContent = count;
-                
-                if (count >= 100 && count <= 140) {
-                    titleCount.style.color = '#4CAF50';
-                } else {
-                    titleCount.style.color = count < 100 ? '#FFC107' : '#F44336';
-                }
-            }
-            
-            titleField.addEventListener('input', updateTitleCount);
-            updateTitleCount(); // Initial count
-            
-            // Tags input functionality
-            const tagsContainer = document.getElementById('tags-container');
-            const tagInput = document.getElementById('tag-input');
-            const tagCount = document.getElementById('tag-count');
-            let tags = [];
-            
-            function updateTagCount() {
-                tagCount.textContent = tags.length;
-                if (tags.length >= 13) {
-                    tagInput.disabled = true;
-                    tagInput.placeholder = "Maximum tags reached (13)";
-                } else {
-                    tagInput.disabled = false;
-                    tagInput.placeholder = "Type a tag and press Enter...";
-                }
-            }
-            
-            function renderTags() {
-                // Clear existing tags (except input)
-                const existingTags = tagsContainer.querySelectorAll('.tag');
-                existingTags.forEach(tag => tag.remove());
-                
-                // Add tags
-                tags.forEach((tag, index) => {
-                    const tagElement = document.createElement('div');
-                    tagElement.className = 'tag';
-                    tagElement.innerHTML = tag + '<span class="tag-delete" data-index="' + index + '">×</span>';
-                    tagsContainer.insertBefore(tagElement, tagInput);
-                });
-                
-                updateTagCount();
-            }
-            
-            // Add tag when Enter is pressed
-            tagInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && tagInput.value.trim() !== '' && tags.length < 13) {
-                    e.preventDefault();
-                    tags.push(tagInput.value.trim());
-                    tagInput.value = '';
-                    renderTags();
-                }
-            });
-            
-            // Remove tag when delete button is clicked
-            tagsContainer.addEventListener('click', function(e) {
-                if (e.target.classList.contains('tag-delete')) {
-                    const index = parseInt(e.target.dataset.index);
-                    tags.splice(index, 1);
-                    renderTags();
-                }
-            });
-            
-            // Form submission
-            const apiKeyInput = document.getElementById('api-key');
-            const optimizerForm = document.getElementById('optimizer-form');
-            const resultsSection = document.getElementById('results');
-            const errorDisplay = document.getElementById('error-display');
-            const descriptionField = document.getElementById('description');
-            
-            // Check if API key exists in localStorage
-            if (localStorage.getItem('openai_api_key')) {
-                apiKeyInput.value = localStorage.getItem('openai_api_key');
-            }
-            
-            // Function to show error messages
-            function showError(message) {
-                errorDisplay.textContent = message;
-                errorDisplay.classList.remove('hidden');
-            }
-            
-            // Function to call OpenAI API 
-            async function optimizeWithOpenAI(apiKey, title, tagsArray, description, field = 'all') {
-                const systemPrompt = `
-                You are an AI designed to optimize Etsy product listings for maximum search visibility and conversion. 
-                Your task is to analyze the provided product listing fields and improve them.
-                
-                Please optimize the listing based on these key principles:
-                
-                TITLE OPTIMIZATION:
-                - Ideal title length is 100-140 characters
-                - Important keywords should appear in the first 40 characters
-                - Avoid keyword stuffing or excessive repetition
-                - Use a logical structure with 2-4 phrases separated by | (pipes) or commas
-                
-                TAG OPTIMIZATION:
-                - Create 13 tags maximum (Etsy's limit)
-                - Use multi-word tags rather than single words
-                - Create a mix of broad, medium, and specific tags
-                - Include materials, style, use case, and occasion keywords
-                - Ensure tags relate to searches real customers would make
-                
-                DESCRIPTION OPTIMIZATION:
-                - Include all important keywords from title and tags naturally
-                - Use proper formatting with paragraphs, bullet points, and sections
-                - Include product features, benefits, dimensions, and care instructions
-                - End with a call to action
-                
-                Your response should be in JSON format with the following structure:
-                {
-                    "scores": {
-                        "title_score": {
-                            "value": 0.0, // From 0 to 4.0
-                            "details": {
-                                "character_count": {"score": 0.0, "max": 1.2, "passed": true/false},
-                                "focus_keywords": {"score": 0.0, "max": 1.2, "passed": true/false},
-                                "keyword_stuffing": {"score": 0.0, "max": 0.8, "passed": true/false},
-                                "structure": {"score": 0.0, "max": 0.8, "passed": true/false}
-                            }
-                        },
-                        "tags_score": {
-                            "value": 0.0, // From 0 to 4.0
-                            "details": {
-                                "tag_count": {"score": 0.0, "max": 1.0, "passed": true/false},
-                                "multi_word_tags": {"score": 0.0, "max": 1.0, "passed": true/false},
-                                "chain_structure": {"score": 0.0, "max": 1.0, "passed": true/false},
-                                "diversity": {"score": 0.0, "max": 1.0, "passed": true/false}
-                            }
-                        },
-                        "description_score": {
-                            "value": 0.0, // From 0 to 4.0
-                            "details": {
-                                "length": {"score": 0.0, "max": 1.2, "passed": true/false},
-                                "formatting": {"score": 0.0, "max": 0.8, "passed": true/false},
-                                "keyword_integration": {"score": 0.0, "max": 1.6, "passed": true/false},
-                                "call_to_action": {"score": 0.0, "max": 0.4, "passed": true/false}
-                            }
-                        },
-                        "overall_grade": {
-                            "value": 0.0, // Weighted average of above scores
-                            "letter": "A/B/C/D" // A: ≥3.5, B: ≥2.5, C: ≥1.5, D: <1.5
-                        }
-                    },
-                    "improvements": {
-                        "improved_title": "The optimized title",
-                        "improved_tags": ["tag1", "tag2", "etc"],
-                        "improved_description": "The optimized description",
-                        "title_improvement_note": "Brief explanation of title improvements",
-                        "tags_improvement_note": "Brief explanation of tag improvements",
-                        "description_improvement_note": "Brief explanation of description improvements"
-                    }
-                }
-                `;
-                
-                // Create the user message with the listing details
-                const userMessage = field === 'title' ? 
-                    `Please optimize only this Etsy listing title: "${title}"` :
-                    field === 'tags' ? 
-                    `Please optimize only these Etsy listing tags: ${tagsArray.length > 0 ? tagsArray.join(', ') : 'No tags provided'}` :
-                    field === 'description' ? 
-                    `Please optimize only this Etsy listing description: ${description || 'No description provided'}` :
-                    `
-                    Please optimize this Etsy listing:
-                    
-                    TITLE: ${title}
-                    
-                    TAGS: ${tagsArray.length > 0 ? tagsArray.join(', ') : 'No tags provided'}
-                    
-                    DESCRIPTION: ${description || 'No description provided'}
-                    `;
-                
-                try {
-                    console.log('Sending request to proxy server...');
-                    console.log('API Key length:', apiKey ? apiKey.length : 0);
-                    console.log('System prompt length:', systemPrompt.length);
-                    console.log('User message length:', userMessage.length);
-                    console.log('Field to optimize:', field);
-                    
-                    // Test the API connectivity first
-                    const testResponse = await fetch('/api/test', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ test: 'connection' })
-                    });
-                    
-                    if (!testResponse.ok) {
-                        throw new Error(`Test API request failed with status ${testResponse.status}`);
-                    }
-                    
-                    console.log('Test API request successful, now calling main API...');
-                    
-                    // Use our local proxy server
-                    const response = await fetch('/api/classify', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            apiKey,
-                            systemPrompt,
-                            userPrompt: userMessage,
-                            field
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        let errorMessage = 'API request failed with status ' + response.status;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.error || errorMessage;
-                        } catch (e) {
-                            // If we can't parse the error as JSON, just use the status code message
-                        }
-                        throw new Error(errorMessage);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    // Parse the JSON response from the model
-                    const contentText = data.content[0].text;
-                    // Extract JSON from the response
-                    const jsonMatch = contentText.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                        return JSON.parse(jsonMatch[0]);
-                    } else {
-                        throw new Error('Could not parse optimization result');
-                    }
-                } catch (error) {
-                    console.error('API Error:', error);
-                    throw error;
-                }
-            }
-            
-            // Function to show field feedback
-            function showFeedback(element, message, isSuccess = false) {
-                element.textContent = message;
-                element.classList.remove('hidden');
-                
-                if (isSuccess) {
-                    element.classList.add('feedback-success');
-                } else {
-                    element.classList.remove('feedback-success');
-                }
-            }
-            
-            // Initialize field-specific buttons
-            const titleOnlyBtn = document.getElementById('title-only-btn');
-            const tagsOnlyBtn = document.getElementById('tags-only-btn');
-            const descriptionOnlyBtn = document.getElementById('description-only-btn');
-            const titleFeedback = document.getElementById('title-feedback');
-            const tagsFeedback = document.getElementById('tags-feedback');
-            const descriptionFeedback = document.getElementById('description-feedback');
-            
-            // Handle title-only optimization
-            titleOnlyBtn.addEventListener('click', async function() {
-                // Clear previous feedback
-                titleFeedback.classList.add('hidden');
-                errorDisplay.classList.add('hidden');
-                
-                // Get values
-                const apiKey = apiKeyInput.value.trim();
-                const title = titleField.value.trim();
-                
-                if (!apiKey) {
-                    showError('Please enter your OpenAI API key');
-                    return;
-                }
-                
-                if (!title) {
-                    showError('Please enter a product title');
-                    return;
-                }
-                
-                // Save API key
-                localStorage.setItem('openai_api_key', apiKey);
-                
-                // Show loading indicator
-                titleOnlyBtn.textContent = 'Optimizing...';
-                titleOnlyBtn.disabled = true;
-                
-                try {
-                    // Call API for title only
-                    const result = await optimizeWithOpenAI(apiKey, title, tags, '', 'title');
-                    
-                    // Show feedback
-                    showFeedback(titleFeedback, result.improvements.title_improvement_note, true);
-                    
-                    // Update title with improved version
-                    titleField.value = result.improvements.improved_title;
-                    updateTitleCount();
-                } catch (error) {
-                    showError('Error: ' + error.message);
-                } finally {
-                    // Reset button
-                    titleOnlyBtn.textContent = 'Optimize Title Only';
-                    titleOnlyBtn.disabled = false;
-                }
-            });
-            
-            // Handle tags-only optimization
-            tagsOnlyBtn.addEventListener('click', async function() {
-                // Clear previous feedback
-                tagsFeedback.classList.add('hidden');
-                errorDisplay.classList.add('hidden');
-                
-                // Get values
-                const apiKey = apiKeyInput.value.trim();
-                const title = titleField.value.trim();
-                
-                if (!apiKey) {
-                    showError('Please enter your OpenAI API key');
-                    return;
-                }
-                
-                // Save API key
-                localStorage.setItem('openai_api_key', apiKey);
-                
-                // Show loading indicator
-                tagsOnlyBtn.textContent = 'Optimizing...';
-                tagsOnlyBtn.disabled = true;
-                
-                try {
-                    // Call API for tags only
-                    const result = await optimizeWithOpenAI(apiKey, title, tags, '', 'tags');
-                    
-                    // Show feedback
-                    showFeedback(tagsFeedback, result.improvements.tags_improvement_note, true);
-                    
-                    // Update tags with improved version
-                    tags = result.improvements.improved_tags;
-                    renderTags();
-                } catch (error) {
-                    showError('Error: ' + error.message);
-                } finally {
-                    // Reset button
-                    tagsOnlyBtn.textContent = 'Optimize Tags Only';
-                    tagsOnlyBtn.disabled = false;
-                }
-            });
-            
-            // Handle description-only optimization
-            descriptionOnlyBtn.addEventListener('click', async function() {
-                // Clear previous feedback
-                descriptionFeedback.classList.add('hidden');
-                errorDisplay.classList.add('hidden');
-                
-                // Get values
-                const apiKey = apiKeyInput.value.trim();
-                const title = titleField.value.trim();
-                const description = descriptionField.value.trim();
-                
-                if (!apiKey) {
-                    showError('Please enter your OpenAI API key');
-                    return;
-                }
-                
-                // Save API key
-                localStorage.setItem('openai_api_key', apiKey);
-                
-                // Show loading indicator
-                descriptionOnlyBtn.textContent = 'Optimizing...';
-                descriptionOnlyBtn.disabled = true;
-                
-                try {
-                    // Call API for description only
-                    const result = await optimizeWithOpenAI(apiKey, title, tags, description, 'description');
-                    
-                    // Show feedback
-                    showFeedback(descriptionFeedback, result.improvements.description_improvement_note, true);
-                    
-                    // Update description with improved version
-                    descriptionField.value = result.improvements.improved_description;
-                } catch (error) {
-                    showError('Error: ' + error.message);
-                } finally {
-                    // Reset button
-                    descriptionOnlyBtn.textContent = 'Optimize Description Only';
-                    descriptionOnlyBtn.disabled = false;
-                }
-            });
-            
-            // Handle form submission (optimize all)
-            optimizerForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                // Clear previous errors and feedback
-                errorDisplay.classList.add('hidden');
-                errorDisplay.textContent = '';
-                titleFeedback.classList.add('hidden');
-                tagsFeedback.classList.add('hidden');
-                descriptionFeedback.classList.add('hidden');
-                
-                // Get form values
-                const apiKey = apiKeyInput.value.trim();
-                const title = titleField.value.trim();
-                const description = descriptionField.value.trim();
-                
-                // Validate inputs
-                if (!apiKey) {
-                    showError('Please enter your OpenAI API key');
-                    return;
-                }
-                
-                if (!title) {
-                    showError('Please enter a product title');
-                    return;
-                }
-                
-                // Save API key to localStorage
-                localStorage.setItem('openai_api_key', apiKey);
-                
-                // Show loading overlay
-                document.querySelector('.loading').style.display = 'flex';
-                
-                try {
-                    // Call OpenAI API for full optimization
-                    const result = await optimizeWithOpenAI(apiKey, title, tags, description, 'all');
-                    
-                    // Update UI with results
-                    updateResults(result, title, tags, description);
-                    
-                    // Show results section
-                    resultsSection.classList.remove('hidden');
-                    
-                    // Smoothly scroll to results
-                    resultsSection.scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Show success feedback on all fields
-                    showFeedback(titleFeedback, "Title optimized successfully!", true);
-                    showFeedback(tagsFeedback, "Tags optimized successfully!", true);
-                    showFeedback(descriptionFeedback, "Description optimized successfully!", true);
-                } catch (error) {
-                    showError('Error: ' + error.message);
-                } finally {
-                    // Hide loading overlay
-                    document.querySelector('.loading').style.display = 'none';
-                }
-            });
-            
-            // Function to update UI with optimization results
-            function updateResults(result, originalTitle, originalTags, originalDescription) {
-                // Update score cards
-                document.querySelector('.score.grade-b .score-value').textContent = 
-                    result.scores.overall_grade.value.toFixed(1) + '/4.0';
-                document.querySelector('.score.grade-b').className = 
-                    'score grade-' + result.scores.overall_grade.letter.toLowerCase();
-                
-                // Update title score
-                const titleScoreElement = document.querySelector('.score-card:nth-child(2) .score-value');
-                titleScoreElement.textContent = result.scores.title_score.value.toFixed(1) + '/4.0';
-                
-                const titleDetails = document.querySelector('.score-card:nth-child(2) .score-details');
-                titleDetails.innerHTML = `
-                    <div>${result.scores.title_score.details.character_count.passed ? '✓' : '✗'} Character Count: ${result.scores.title_score.details.character_count.score.toFixed(1)}/${result.scores.title_score.details.character_count.max.toFixed(1)}</div>
-                    <div>${result.scores.title_score.details.focus_keywords.passed ? '✓' : '✗'} Focus Keywords: ${result.scores.title_score.details.focus_keywords.score.toFixed(1)}/${result.scores.title_score.details.focus_keywords.max.toFixed(1)}</div>
-                    <div>${result.scores.title_score.details.keyword_stuffing.passed ? '✓' : '✗'} Keyword Stuffing: ${result.scores.title_score.details.keyword_stuffing.score.toFixed(1)}/${result.scores.title_score.details.keyword_stuffing.max.toFixed(1)}</div>
-                    <div>${result.scores.title_score.details.structure.passed ? '✓' : '✗'} Structure: ${result.scores.title_score.details.structure.score.toFixed(1)}/${result.scores.title_score.details.structure.max.toFixed(1)}</div>
-                `;
-                
-                // Update tags score
-                const tagsScoreElement = document.querySelector('.score-card:nth-child(3) .score-value');
-                tagsScoreElement.textContent = result.scores.tags_score.value.toFixed(1) + '/4.0';
-                
-                const tagsDetails = document.querySelector('.score-card:nth-child(3) .score-details');
-                tagsDetails.innerHTML = `
-                    <div>${result.scores.tags_score.details.tag_count.passed ? '✓' : '✗'} Tag Count: ${result.scores.tags_score.details.tag_count.score.toFixed(1)}/${result.scores.tags_score.details.tag_count.max.toFixed(1)}</div>
-                    <div>${result.scores.tags_score.details.multi_word_tags.passed ? '✓' : '✗'} Multi-word Tags: ${result.scores.tags_score.details.multi_word_tags.score.toFixed(1)}/${result.scores.tags_score.details.multi_word_tags.max.toFixed(1)}</div>
-                    <div>${result.scores.tags_score.details.chain_structure.passed ? '✓' : '✗'} Chain Structure: ${result.scores.tags_score.details.chain_structure.score.toFixed(1)}/${result.scores.tags_score.details.chain_structure.max.toFixed(1)}</div>
-                    <div>${result.scores.tags_score.details.diversity.passed ? '✓' : '✗'} Diversity: ${result.scores.tags_score.details.diversity.score.toFixed(1)}/${result.scores.tags_score.details.diversity.max.toFixed(1)}</div>
-                `;
-                
-                // Update description score
-                const descScoreElement = document.querySelector('.score-card:nth-child(4) .score-value');
-                descScoreElement.textContent = result.scores.description_score.value.toFixed(1) + '/4.0';
-                
-                const descDetails = document.querySelector('.score-card:nth-child(4) .score-details');
-                descDetails.innerHTML = `
-                    <div>${result.scores.description_score.details.length.passed ? '✓' : '✗'} Length: ${result.scores.description_score.details.length.score.toFixed(1)}/${result.scores.description_score.details.length.max.toFixed(1)}</div>
-                    <div>${result.scores.description_score.details.formatting.passed ? '✓' : '✗'} Formatting: ${result.scores.description_score.details.formatting.score.toFixed(1)}/${result.scores.description_score.details.formatting.max.toFixed(1)}</div>
-                    <div>${result.scores.description_score.details.keyword_integration.passed ? '✓' : '✗'} Keyword Integration: ${result.scores.description_score.details.keyword_integration.score.toFixed(1)}/${result.scores.description_score.details.keyword_integration.max.toFixed(1)}</div>
-                    <div>${result.scores.description_score.details.call_to_action.passed ? '✓' : '✗'} Call to Action: ${result.scores.description_score.details.call_to_action.score.toFixed(1)}/${result.scores.description_score.details.call_to_action.max.toFixed(1)}</div>
-                `;
-                
-                // Update original and improved content
-                document.getElementById('original-title').textContent = originalTitle;
-                document.getElementById('improved-title').textContent = result.improvements.improved_title;
-                document.getElementById('original-tags').textContent = originalTags.length > 0 ? originalTags.join(', ') : 'No tags provided';
-                document.getElementById('improved-tags').textContent = result.improvements.improved_tags.join(', ');
-                document.getElementById('original-description').textContent = originalDescription || 'No description provided';
-                document.getElementById('improved-description').textContent = result.improvements.improved_description;
-                
-                // Update improvement notes
-                document.querySelector('.improvement-note:nth-of-type(1)').textContent = result.improvements.title_improvement_note;
-                document.querySelector('.improvement-note:nth-of-type(2)').textContent = result.improvements.tags_improvement_note;
-                document.querySelector('.improvement-note:nth-of-type(3)').textContent = result.improvements.description_improvement_note;
-            }
-            
-            // Tabs functionality
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    // Remove active class from all tabs
-                    tabs.forEach(t => t.classList.remove('active'));
-                    // Add active class to clicked tab
-                    this.classList.add('active');
-                    
-                    // Hide all tab contents
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    
-                    // Show selected tab content
-                    const tabId = this.dataset.tab + '-tab';
-                    document.getElementById(tabId).classList.add('active');
-                });
-            });
-            
-            // "Use improved" functionality
-            document.getElementById('use-title').addEventListener('click', function() {
-                titleField.value = document.getElementById('improved-title').textContent;
-                updateTitleCount();
-            });
-            
-            document.getElementById('use-tags').addEventListener('click', function() {
-                const improvedTags = document.getElementById('improved-tags').textContent.split(', ');
-                tags = improvedTags;
-                renderTags();
-            });
-            
-            document.getElementById('use-description').addEventListener('click', function() {
-                document.getElementById('description').value = document.getElementById('improved-description').textContent;
-            });
-            
-            document.getElementById('save-all').addEventListener('click', function() {
-                document.getElementById('use-title').click();
-                document.getElementById('use-tags').click();
-                document.getElementById('use-description').click();
-                
-                alert('All improvements have been applied to your listing!');
-            });
-        });
-    </script>
+
+   <script src="etsygrade.js"></script>
 </body>
 </html>
 
 ================
-File: package.json
+File: perfect_examples.txt
 ================
-{
-  "name": "text-classifier",
-  "version": "1.0.0",
-  "description": "Text classification using OpenAI API",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "node-fetch": "^2.6.9"
-  }
+# Two Perfect Score (4.0/4.0) Etsy Listing Examples
+
+## Example 1: Silver Jewelry
+
+### Title
+Handmade Silver Earrings, Dangle Earrings, Sterling Silver Jewelry, Minimalist Earrings, Boho Earrings, Gift for Her
+
+*Title Score: 4.0/4.0*
+- Character Count: 125 characters (1.2/1.2)
+- Focus Keywords: At least 4 tag keywords in first 60 chars (1.2/1.2)
+- Redundancy: No words repeated more than twice (0.8/0.8)
+- Commas: 5 commas - optimal range of 2-6 (0.8/0.8)
+
+### Tags
+1. handmade silver earrings
+2. sterling silver jewelry
+3. minimalist dangle earrings
+4. boho style jewelry
+5. gift for her jewelry
+6. bohemian silver dangles
+7. modern silver earrings
+8. unique handcrafted jewelry
+9. artisan silver earrings
+10. statement silver jewelry
+11. elegant dangle earrings
+12. handmade silver accessories
+13. contemporary silver pieces
+
+*Tags Score: 4.0/4.0*
+- Tag Count: All 13 tags used (1.0/1.0)
+- Multi-word Ratio: 100% multi-word tags (1.0/1.0)
+- Quality Score: No low-quality tags (1.0/1.0)
+- Diversity Score: High ratio of unique words to total words (1.0/1.0)
+
+### Description
+These elegant handmade silver earrings are crafted with precision and care, making them the perfect addition to your jewelry collection.
+
+• Made from genuine sterling silver
+• Lightweight and comfortable for all-day wear
+• Unique handcrafted design ensures no two pairs are exactly alike
+• Approximately 1.5 inches in length
+• Comes in a beautiful gift box ready for giving
+
+These minimalist dangle earrings feature a modern, boho design that complements any outfit, from casual to formal wear. The sterling silver catches the light beautifully, adding a subtle sparkle to your look.
+
+Perfect as a gift for her on any special occasion - birthdays, anniversaries, holidays, or just because. These versatile earrings will quickly become a favorite in her jewelry collection.
+
+Each pair of earrings is handcrafted in my studio, ensuring attention to detail and quality craftsmanship that mass-produced jewelry simply cannot match.
+
+*Description Score: 4.0/4.0*
+- Length: 927 characters - well above 160 character minimum (1.2/1.2)
+- Formatting: Includes bullet points (1.2/1.2)
+- Keyword Integration: All major keywords from title included (1.6/1.6)
+
+## Example 2: Leather Journal
+
+### Title
+Personalized Leather Journal, Custom Notebook, Handmade Sketchbook, Travel Diary, Anniversary Gift, Graduation Gift
+
+*Title Score: 4.0/4.0*
+- Character Count: 109 characters (1.2/1.2)
+- Focus Keywords: Multiple tag keywords in first 60 chars (1.2/1.2)
+- Redundancy: No words repeated more than twice (0.8/0.8)
+- Commas: 5 commas - optimal range of 2-6 (0.8/0.8)
+
+### Tags
+1. personalized leather journal
+2. custom leather notebook
+3. handmade leather sketchbook
+4. travel writing journal
+5. anniversary gift notebook
+6. graduation gift journal
+7. leather bound sketchbook
+8. customized writing diary
+9. hand stitched leather book
+10. personalized name journal
+11. vintage style leather diary
+12. professional writing notebook
+13. artisan leather sketchbook
+
+*Tags Score: 4.0/4.0*
+- Tag Count: All 13 tags used (1.0/1.0)
+- Multi-word Ratio: 100% multi-word tags (1.0/1.0)
+- Quality Score: No low-quality tags (1.0/1.0)
+- Diversity Score: High ratio of unique words to total words (1.0/1.0)
+
+### Description
+This beautiful personalized leather journal is handcrafted with love and attention to detail, making it a truly special keepsake.
+
+• Made from genuine full-grain leather that ages beautifully
+• Available in brown, black, or rustic tan colors
+• Customized with name, initials, or short message of your choice
+• Contains 200 pages (100 sheets) of premium acid-free paper
+• Measures 5.5" x 8.5" - perfect for carrying in a bag or backpack
+• Securely bound with traditional hand-stitching techniques
+
+This custom notebook is ideal for sketching, journaling, or writing down your thoughts during your travels. The leather cover develops a beautiful patina over time, making each journal uniquely yours as it ages.
+
+Makes a thoughtful and lasting anniversary gift, graduation present, or special surprise for anyone who appreciates fine craftsmanship and personalized touches. The hand-stitched binding allows the journal to lay flat when open, making writing a joy.
+
+Each leather journal is handmade in my workshop, ensuring quality and attention to detail that mass-produced notebooks simply cannot match.
+
+*Description Score: 4.0/4.0*
+- Length: 1101 characters - well above 160 character minimum (1.2/1.2)
+- Formatting: Includes bullet points (1.2/1.2)
+- Keyword Integration: All major keywords from title included (1.6/1.6)
+
+================
+File: style.css
+================
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+h1, h2, h3 {
+    color: #222;
+}
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+@media (min-width: 768px) {
+    .container {
+        flex-direction: row;
+    }
+    .input-section, .results-section {
+        width: 50%;
+    }
+}
+.input-section {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.results-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+textarea, input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-family: inherit;
+}
+textarea {
+    min-height: 120px;
+}
+button {
+    background-color: #F56400;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 10px 0;
+}
+button:hover {
+    background-color: #E05800;
+}
+.score-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.score-header h3 {
+    margin: 0;
+}
+.score-value {
+    font-size: 24px;
+    font-weight: bold;
+    padding: 5px 15px;
+    border-radius: 20px;
+    color: white;
+}
+.grade-A {
+    background-color: #4CAF50;
+}
+.grade-B {
+    background-color: #8BC34A;
+}
+.grade-C {
+    background-color: #FFC107;
+}
+.grade-D {
+    background-color: #F44336;
+}
+.score-details {
+    margin-top: 10px;
+}
+.score-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+.score-item:last-child {
+    border-bottom: none;
+}
+.recommendations {
+    background-color: #FFF8E1;
+    border-left: 4px solid #FFC107;
+    padding: 15px;
+    margin-top: 10px;
+}
+.highlight {
+    background-color: #9C27B0;
+    color: white;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.pill-recommendation {
+    background-color: #E8EAF6;
+    color: #3F51B5;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin: 2px;
+    display: inline-block;
+    border: 1px solid #C5CAE9;
+}
+.recommendations h4 {
+    margin-top: 0;
+    color: #795548;
+}
+.recommendations ul {
+    margin: 0;
+    padding-left: 20px;
+}
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+.tag {
+    background-color: #eee;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+.tag button {
+    background: none;
+    border: none;
+    color: #999;
+    margin: 0 0 0 5px;
+    padding: 0;
+    font-size: 16px;
+    cursor: pointer;
+}
+#tagInput {
+    width: calc(100% - 220px);
+    display: inline-block;
+    margin-right: 10px;
+}
+.add-tag-btn {
+    width: 100px;
+    display: inline-block;
+    margin: 0;
+    padding: 10px;
+}
+.clear-tags-btn, .copy-tags-btn {
+    background-color: #ddd;
+    color: #333;
+    width: 100px;
+    display: inline-block;
+    margin: 10px 0 0 0;
+    padding: 10px;
+}
+.copy-tags-btn {
+    background-color: #f0f0f0;
+    margin-left: 10px;
+}
+.sample-btn {
+    background-color: #ddd;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.tools-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.tool-link {
+    display: inline-block;
+    text-decoration: none;
+    color: #333;
+    background-color: #f0f0f0;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.tool-link:hover {
+    background-color: #e3e3e3;
+}
+
+.tool-name {
+    font-weight: bold;
+    color: #F56400;
 }
 
 ================
-File: README.md
+File: title-guide.css
 ================
-# Text Classifier with OpenAI API
-
-This is a simple web application that uses the OpenAI GPT-4 API to classify text into different categories.
-
-## Features
-
-- Classify text into predefined categories (sentiment, content type, topic, intent)
-- Create custom classification categories
-- Get detailed results with confidence scores and explanations
-- Per-field feedback and optimization
-- Simple and intuitive user interface
-
-## Setup
-
-1. Make sure you have Node.js installed on your machine
-2. Clone this repository
-3. Install dependencies:
-
-```bash
-npm install
-```
-
-4. Start the server:
-
-```bash
-npm start
-```
-
-5. Open your browser and navigate to: http://localhost:3000/classify.html
-
-## Usage
-
-1. Enter your OpenAI API key (you can get one from https://platform.openai.com/api-keys)
-2. Enter the text you want to classify
-3. Select a classification type:
-   - Choose from predefined categories (sentiment, content type, topic, intent)
-   - Or define your own custom categories (comma-separated)
-4. You can:
-   - Click "Classify Text" button for full classification
-   - Click "Classify Text Only" to get feedback on your text
-   - Click "Validate Categories" to check your custom categories
-5. View the detailed classification results
-
-## How it Works
-
-The application uses a Node.js server to proxy requests to the OpenAI API, avoiding CORS issues. The classification is performed by GPT-4, OpenAI's powerful language model.
-
-The app provides:
-- A primary classification with confidence score
-- Breakdown of all category scores
-- Explanation of the classification decision
-- Per-field feedback and optimization options
-
-## Privacy
-
-Your API key is stored only in your browser's local storage and is never saved on our servers. All API requests are made directly from your browser to the OpenAI API through our proxy server.
-
-## Requirements
-
-- Node.js 14+
-- A valid OpenAI API key
-
-================
-File: server.js
-================
-const express = require('express');
-const cors = require('cors');
-const fetch = require('node-fetch');
-const app = express();
-const port = 3000;
-
-// Enable CORS for all routes
-app.use(cors());
-
-// Parse JSON request bodies
-app.use(express.json({ limit: '10mb' }));
-
-// Add request logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} started`);
-  
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} completed with ${res.statusCode} in ${duration}ms`);
-  });
-  
-  next();
-});
-
-// Serve static files from the current directory
-app.use(express.static('./'));
-
-// Simple test endpoint
-app.post('/api/test', (req, res) => {
-  console.log('Test endpoint received:', req.body);
-  res.json({ message: 'Test endpoint successful!', received: req.body });
-});
-
-// Proxy endpoint for OpenAI API
-app.post('/api/classify', async (req, res) => {
-    console.log('Classify endpoint called');
-    const { apiKey, systemPrompt, userPrompt, field } = req.body;
-    
-    if (!apiKey) {
-        console.log('API key missing');
-        return res.status(400).json({ error: 'API key is required' });
-    }
-    
-    // Log the prompts for debugging
-    console.log('System prompt:', systemPrompt ? systemPrompt.substring(0, 100) + '...' : 'undefined');
-    console.log('User prompt:', userPrompt ? userPrompt.substring(0, 100) + '...' : 'undefined');
-    console.log('Field:', field || 'all');
-    
-    try {
-        console.log('Calling OpenAI API...');
-        
-        const requestBody = {
-            model: 'gpt-4',
-            max_tokens: 4000,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-            ]
-        };
-        
-        console.log('Request body:', JSON.stringify(requestBody).substring(0, 150) + '...');
-        
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        console.log('OpenAI API response status:', response.status);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('API Error Response:', errorText);
-            
-            try {
-                const errorData = JSON.parse(errorText);
-                return res.status(response.status).json({ 
-                    error: errorData.error?.message || 'OpenAI API error' 
-                });
-            } catch (e) {
-                return res.status(response.status).json({ 
-                    error: `OpenAI API returned status ${response.status}` 
-                });
-            }
-        }
-        
-        const data = await response.json();
-        console.log('API response received successfully');
-        
-        // Transform OpenAI response format to match what our client code expects
-        const transformedResponse = {
-            content: [
-                {
-                    text: data.choices[0].message.content
-                }
-            ],
-            field: field || 'all'
-        };
-        
-        res.json(transformedResponse);
-    } catch (error) {
-        console.error('Error calling OpenAI API:', error);
-        res.status(500).json({ error: 'Failed to call OpenAI API: ' + error.message });
-    }
-});
-
-// Provide a helpful 404 for any other routes
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `The endpoint ${req.method} ${req.path} does not exist`,
-    availableEndpoints: [
-      { method: 'POST', path: '/api/classify', description: 'Proxy to OpenAI API' },
-      { method: 'POST', path: '/api/test', description: 'Test endpoint' },
-      { method: 'GET', path: '/', description: 'Static files' }
-    ]
-  });
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal Server Error', message: err.message });
-});
-
-// Start the server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-    console.log(`Available applications:`);
-    console.log(`- Etsy Listing Optimizer: http://localhost:${port}/index.html`);
-    console.log(`- Text Classifier: http://localhost:${port}/classify.html`);
-    console.log(`- API Test: http://localhost:${port}/test.html`);
-});
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+h1, h2, h3 {
+    color: #222;
+}
+h1 {
+    padding-bottom: 10px;
+    border-bottom: 2px solid #F56400;
+}
+h2 {
+    margin-top: 30px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+}
+.highlight {
+    background-color: #FFF8E1;
+    border-left: 4px solid #FFC107;
+    padding: 15px;
+    margin: 20px 0;
+}
+.example {
+    background-color: #E8F5E9;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+.poor {
+    background-color: #FFEBEE;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+.good {
+    background-color: #E8F5E9;
+    padding: 10px;
+    border-radius: 5px;
+}
+.focus-area {
+    background-color: #E3F2FD;
+    padding: 3px;
+}
+.tip {
+    background-color: #E8EAF6;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+.tip h3 {
+    margin-top: 0;
+    color: #3F51B5;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+}
+th {
+    background-color: #f5f5f5;
+}
+.step {
+    margin-bottom: 30px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.tool-container {
+    background-color: #E1F5FE;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 30px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.input-section {
+    margin-bottom: 20px;
+}
+.input-section textarea, .input-section input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    margin-top: 5px;
+}
+.input-section textarea {
+    min-height: 80px;
+}
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+.tag {
+    background-color: #E8EAF6;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+.tag button {
+    background: none;
+    border: none;
+    color: #999;
+    margin: 0 0 0 5px;
+    padding: 0;
+    font-size: 16px;
+    cursor: pointer;
+}
+button {
+    background-color: #F56400;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 10px 0;
+}
+button:hover {
+    background-color: #E05800;
+}
+.results {
+    margin-top: 20px;
+}
+.results h3 {
+    margin-top: 0;
+}
+.title-result {
+    background-color: #E8F5E9;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 10px 0;
+    position: relative;
+}
+.copy-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background-color: #ddd;
+    color: #333;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.copy-btn:hover {
+    background-color: #ccc;
+}
+.first-60 {
+    background-color: #E3F2FD;
+    padding: 2px;
+}
+.char-count {
+    color: #757575;
+    font-size: 14px;
+    margin-top: 5px;
+}
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+}
+.tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    margin-right: 5px;
+}
+.tab.active {
+    background-color: #fff;
+    font-weight: bold;
+    border-bottom: 1px solid white;
+    margin-bottom: -1px;
+}
+.tab-content {
+    display: none;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 0 4px 4px 4px;
+}
+.tab-content.active {
+    display: block;
+}
 
 ================
-File: test-server.js
-================
-const express = require('express');
-const app = express();
-const port = 3001;
-
-// Enable JSON parsing
-app.use(express.json());
-
-// Add logging middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-});
-
-// Simple test endpoint
-app.post('/api/test', (req, res) => {
-  console.log('Request body:', req.body);
-  res.json({ message: 'Test endpoint successful!', received: req.body });
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Test server running at http://localhost:${port}`);
-  console.log('To test the server, run:');
-  console.log('curl -X POST -H "Content-Type: application/json" -d \'{"test":"data"}\' http://localhost:3001/api/test');
-});
-
-================
-File: test.html
+File: title-guide.html
 ================
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        button {
-            padding: 10px 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 10px 0;
-        }
-        pre {
-            background-color: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
-            overflow: auto;
-        }
-    </style>
+    <title>Etsy Title Optimization Tool</title>
+    <link rel="stylesheet" href="title-guide.css">
+<script src="title-optim.js"></script>
 </head>
 <body>
-    <h1>API Test Page</h1>
-    <p>This page tests communication with the server API endpoints.</p>
+    <h1>Etsy Title Optimization Tool <span style="font-size: 16px; color: #757575; font-weight: normal; margin-left: 10px;">v1.0</span></h1>
     
-    <h2>Test Local Endpoint</h2>
-    <div>
-        <button id="test-btn">Test API</button>
-    </div>
-    <pre id="test-result">Results will appear here...</pre>
-    
-    <h2>Debug Information</h2>
-    <div>
-        <button id="debug-btn">Show Debug Info</button>
-    </div>
-    <pre id="debug-info"></pre>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const testBtn = document.getElementById('test-btn');
-            const testResult = document.getElementById('test-result');
-            const debugBtn = document.getElementById('debug-btn');
-            const debugInfo = document.getElementById('debug-info');
+    <p>Create effective Etsy listing titles that maximize the number of focus keywords, especially within the first 60 characters, while maintaining clarity and natural phrasing.</p>
+
+    <!-- Interactive Title Optimization Tool -->
+    <div class="tool-container">
+        <h2>Title Optimizer</h2>
+        <p>Enter your tags and/or current title to get optimization suggestions:</p>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('input-tab', this)">Input</div>
+            <div class="tab" onclick="switchTab('results-tab', this)">Results</div>
+            <div class="tab" onclick="switchTab('guide-tab', this)">Guide</div>
+        </div>
+        
+        <div id="input-tab" class="tab-content active">
+            <div class="input-section">
+                <label for="currentTitle"><strong>Current Title</strong> (optional)</label>
+                <textarea id="currentTitle" placeholder="Enter your current Etsy listing title..."></textarea>
+                <div class="char-count"><span id="titleCharCount">0</span>/140 characters</div>
+            </div>
             
-            // Test API button
-            testBtn.addEventListener('click', async function() {
-                testResult.textContent = 'Testing API...';
+            <div class="input-section">
+                <label><strong>Tags</strong> (help us understand your important keywords)</label>
+                <div class="tag-container" id="tagContainer"></div>
                 
-                try {
-                    console.log('Sending test request...');
-                    const response = await fetch('http://localhost:3001/api/test', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            test: 'data',
-                            timestamp: new Date().toISOString()
-                        })
-                    });
-                    
-                    console.log('Response status:', response.status);
-                    
-                    if (!response.ok) {
-                        throw new Error(`API request failed with status ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    testResult.textContent = JSON.stringify(data, null, 2);
-                } catch (error) {
-                    console.error('Error testing API:', error);
-                    testResult.textContent = 'Error: ' + error.message;
-                }
-            });
+                <div>
+                    <input type="text" id="tagInput" placeholder="Add a tag or comma-separated tags...">
+                    <button id="addTagBtn">Add Tag</button>
+                </div>
+            </div>
             
-            // Debug button
-            debugBtn.addEventListener('click', function() {
-                const info = {
-                    userAgent: navigator.userAgent,
-                    platform: navigator.platform,
-                    cookiesEnabled: navigator.cookieEnabled,
-                    language: navigator.language,
-                    online: navigator.onLine,
-                    screenSize: {
-                        width: window.innerWidth,
-                        height: window.innerHeight
-                    },
-                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    currentTime: new Date().toISOString()
-                };
-                
-                debugInfo.textContent = JSON.stringify(info, null, 2);
-            });
-        });
-    </script>
+            <div class="input-section">
+                <label for="productDescription"><strong>Brief Product Description</strong> (optional)</label>
+                <textarea id="productDescription" placeholder="Briefly describe your product (materials, use, style, etc.)..."></textarea>
+            </div>
+            
+            <button id="optimizeBtn">Generate Optimized Titles</button>
+        </div>
+        
+        <div id="results-tab" class="tab-content">
+            <div class="results" id="resultsContainer">
+                <p>Enter your information and click "Generate Optimized Titles" to see suggestions.</p>
+            </div>
+        </div>
+        
+        <div id="guide-tab" class="tab-content">
+            <h3>Title Optimization Best Practices</h3>
+            <ul>
+                <li>Place your most important keywords in the first 60 characters</li>
+                <li>Use 2-6 separators (commas, pipes, or dashes) to divide keywords</li>
+                <li>Avoid repeating words more than twice</li>
+                <li>Keep your title length between 70-140 characters</li>
+                <li>Match keywords in your title with your tags</li>
+                <li>Use natural language that makes sense to shoppers</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="highlight">
+        <h3>Why the First 60 Characters Matter</h3>
+        <p>The first 60 characters of your title are the most important for several reasons:</p>
+        <ul>
+            <li>They appear in search results and browser tabs</li>
+            <li>Etsy's algorithm gives them more weight</li>
+            <li>Mobile devices show a truncated title</li>
+            <li>Shoppers scan the beginning of titles first</li>
+        </ul>
+    </div>
+
+    <h2>Step-by-Step Title Optimization Process</h2>
+    
+    <div class="step">
+        <h3>Step 1: Identify Your Primary Keywords</h3>
+        <p>Start by identifying 3-5 primary keywords that best describe your product. These should be words that potential customers are most likely to search for.</p>
+        
+        <div class="example">
+            <p><strong>Example Product:</strong> A handmade ceramic coffee mug with blue glaze</p>
+            <p><strong>Primary Keywords:</strong> ceramic mug, coffee cup, handmade pottery, blue mug, tea cup</p>
+        </div>
+    </div>
+    
+    <div class="step">
+        <h3>Step 2: Prioritize Your First 60 Characters</h3>
+        <p>Structure your title so that your most important 2-3 primary keywords appear within the first 60 characters.</p>
+        
+        <div class="example">
+            <p><strong>Poor Structure (important keywords after 60 chars):</strong></p>
+            <div class="poor">
+                <span class="focus-area">Beautiful Handcrafted Gift for Coffee Lovers - Perfect for Home</span> Decoration, Ceramic Coffee Mug, Blue Pottery, Tea Cup, Unique Present
+            </div>
+            
+            <p><strong>Better Structure (important keywords in first 60 chars):</strong></p>
+            <div class="good">
+                <span class="focus-area">Ceramic Coffee Mug, Handmade Blue Pottery, Tea Cup - Unique</span> Gift for Coffee Lovers, Home Decoration, Perfect Present
+            </div>
+        </div>
+    </div>
+    
+    <div class="step">
+        <h3>Step 3: Use Strategic Separators</h3>
+        <p>Use commas, pipes (|), or dashes to separate keywords. This helps Etsy's search algorithm interpret your title correctly and improves readability.</p>
+        
+        <table>
+            <tr>
+                <th>Separator</th>
+                <th>Example</th>
+                <th>Best Used For</th>
+            </tr>
+            <tr>
+                <td>Comma (,)</td>
+                <td>Ceramic Mug, Coffee Cup, Handmade</td>
+                <td>Primary separator - most recognized by search engines</td>
+            </tr>
+            <tr>
+                <td>Pipe (|)</td>
+                <td>Ceramic Mug | Coffee Cup | Handmade</td>
+                <td>Visually distinctive - helps for longer titles</td>
+            </tr>
+            <tr>
+                <td>Dash (-)</td>
+                <td>Ceramic Mug - Coffee Cup - Handmade</td>
+                <td>Connecting related concepts or variations</td>
+            </tr>
+        </table>
+        
+        <p><strong>Aim for 2-6 separators total in your title for optimal results.</strong></p>
+    </div>
+    
+    <div class="step">
+        <h3>Step 4: Avoid Redundancy</h3>
+        <p>Don't repeat the same word more than twice in your title. This wastes valuable character space and can hurt your SEO.</p>
+        
+        <div class="example">
+            <p><strong>Redundant:</strong></p>
+            <div class="poor">
+                Ceramic Coffee Mug, Coffee Cup, Coffee Lover Gift, Coffee Mug, Handmade Coffee Mug
+            </div>
+            
+            <p><strong>Improved:</strong></p>
+            <div class="good">
+                Ceramic Coffee Mug, Handmade Pottery Cup, Hot Beverage Holder, Glazed Drinkware, Tea Cup
+            </div>
+        </div>
+    </div>
+    
+    <div class="step">
+        <h3>Step 5: Balance Keywords with Readability</h3>
+        <p>While keywords are important, your title should still read naturally and make sense to shoppers.</p>
+        
+        <div class="example">
+            <p><strong>Keyword Stuffed:</strong></p>
+            <div class="poor">
+                Mug Cup Coffee Tea Ceramic Handmade Gift Blue Pottery Glazed Drinkware Present
+            </div>
+            
+            <p><strong>Balanced:</strong></p>
+            <div class="good">
+                Ceramic Coffee Mug, Handmade Blue Pottery, Tea Cup, Unique Glazed Drinkware Gift
+            </div>
+        </div>
+    </div>
+    
+    <h2>Title Templates That Work</h2>
+    
+    <p>These templates can help you structure effective titles for different types of products:</p>
+    
+    <div class="example">
+        <h3>For Physical Products:</h3>
+        <p><strong>[Primary Material] [Primary Product] [Key Attribute], [Style/Design] [Secondary Product], [Occasion/Use], [Recipient]</strong></p>
+        <p>Example: <em>Ceramic Coffee Mug, Handmade Blue Pottery, Kitchen Decor, Birthday Gift</em></p>
+    </div>
+    
+    <div class="example">
+        <h3>For Digital Products:</h3>
+        <p><strong>[Product Type] [Key Feature], [Format] [Secondary Feature], [Use Case], [Compatibility]</strong></p>
+        <p>Example: <em>Budget Planner Printable, Excel Spreadsheet Template, Financial Tracker, Google Sheets</em></p>
+    </div>
+    
+    <div class="example">
+        <h3>For Clothing/Accessories:</h3>
+        <p><strong>[Material] [Product], [Style/Design], [Occasion], [Season], [Size/Fit Description]</strong></p>
+        <p>Example: <em>Leather Wallet for Men, Minimalist Design, Anniversary Gift, Slim Bifold</em></p>
+    </div>
+    
+    <h2>Before & After Examples</h2>
+    
+    <table>
+        <tr>
+            <th>Product</th>
+            <th>Original Title</th>
+            <th>Optimized Title</th>
+        </tr>
+        <tr>
+            <td>Candle</td>
+            <td class="poor">Beautiful Handmade Soy Candle That Smells Amazing And Makes A Great Gift For Anyone Who Loves Home Decor And Nice Scents</td>
+            <td class="good">Soy Candle, Handmade Scented Candle, Home Decor, Aromatherapy Gift, Self Care Package</td>
+        </tr>
+        <tr>
+            <td>Earrings</td>
+            <td class="poor">Cute Gold Earrings That Are Perfect For Any Outfit And Will Make You Feel Beautiful Whenever You Wear Them</td>
+            <td class="good">Gold Dangle Earrings, Minimalist Jewelry, Statement Earrings, Gift for Her, Handmade Accessories</td>
+        </tr>
+        <tr>
+            <td>Print</td>
+            <td class="poor">Wall Art That Will Look Amazing In Your Home And Make Your Space Look Beautiful - Digital Download</td>
+            <td class="good">Mountain Landscape Print, Digital Wall Art, Nature Photography, Home Decor, Printable Poster</td>
+        </tr>
+    </table>
+    
+    <div class="tip">
+        <h3>Pro Tips</h3>
+        <ul>
+            <li>Use all 140 characters if possible, but prioritize the first 60</li>
+            <li>Include variations (mug/cup, necklace/pendant) to catch different search terms</li>
+            <li>Update your titles periodically based on seasonal trends</li>
+            <li>Match your title keywords with your tags for maximum SEO impact</li>
+            <li>Check competitor listings that rank well for inspiration (but don't copy exactly)</li>
+        </ul>
+    </div>
+    
+    <h2>Common Mistakes to Avoid</h2>
+    
+    <ul>
+        <li><strong>ALL CAPS</strong> - Looks spammy and hurts readability</li>
+        <li><strong>Random Punctuation!!!</strong> - Extra exclamation points look unprofessional</li>
+        <li><strong>Too Generic</strong> - "Handmade Item" doesn't tell shoppers what you're selling</li>
+        <li><strong>Too Specific</strong> - Extremely niche descriptions limit your visibility</li>
+        <li><strong>Focusing on Wrong Keywords</strong> - Use words shoppers actually search for</li>
+        <li><strong>Including Size Variations</strong> - Put size options in attributes, not the title</li>
+    </ul>
+    
+    <div class="highlight">
+        <h3>Remember</h3>
+        <p>The perfect Etsy title balances:</p>
+        <ul>
+            <li>SEO optimization (keywords)</li>
+            <li>Human readability</li>
+            <li>Accurate product description</li>
+        </ul>
+        <p>When in doubt, prioritize putting your most important 2-3 keywords in the first 60 characters, and ensure your title clearly communicates what you're selling.</p>
+    </div>
+
+
 </body>
 </html>
+
+================
+File: title-optim.js
+================
+const tags=[];function switchTab(t,e){document.querySelectorAll(".tab-content").forEach((t=>{t.classList.remove("active")})),document.getElementById(t).classList.add("active"),document.querySelectorAll(".tab").forEach((t=>{t.classList.remove("active")})),e.classList.add("active")}document.addEventListener("DOMContentLoaded",(function(){const t=document.getElementById("tagContainer"),e=document.getElementById("tagInput"),n=document.getElementById("addTagBtn"),o=document.getElementById("currentTitle"),i=document.getElementById("titleCharCount"),s=document.getElementById("optimizeBtn"),l=document.getElementById("resultsContainer");function r(t){if(!t)return!1;if(t.length>20)return alert(`Tag "${t}" exceeds the 20 character limit and was not added.`),!1;return!tags.some((e=>e.toLowerCase()===t.toLowerCase()))||(alert(`Tag "${t}" is already in your list.`),!1)}function a(){const t=e.value.trim();if(!t)return;const n=t.split(",").map((t=>t.trim())).filter((t=>t));let o=0;for(let t of n)r(t)&&(tags.push(t),o++);o>0&&(c(),e.value="")}function c(){t.innerHTML="",tags.forEach(((e,n)=>{const o=document.createElement("div");o.className="tag";const i=document.createElement("span");i.textContent=e;const s=document.createElement("button");s.textContent="×",s.onclick=function(){tags.splice(n,1),c()},o.appendChild(i),o.appendChild(s),t.appendChild(o)}))}function u(t){return(t.match(/,/g)||[]).length}function d(t){const e=["and","the","a","an","that","this","for","with","by","of","to","in","on","at"];return t.toLowerCase().replace(/[^\w\s]/g," ").split(/\s+/).filter((t=>t.length>2&&!e.includes(t)))}function h(t){return t.split(/,\s*/).map((t=>function(t){const e=["a","an","the","and","but","or","for","nor","on","at","to","from","by","in","of","with","as"];return t.split(" ").map(((t,n)=>t.match(/^[a-z].*[A-Z]/)?t:0===n?t.charAt(0).toUpperCase()+t.slice(1).toLowerCase():e.includes(t.toLowerCase())?t.toLowerCase():t.charAt(0).toUpperCase()+t.slice(1).toLowerCase())).join(" ")}(t))).join(", ")}function g(t,e,n){const o=t.slice(0,Math.min(4,t.length)),i=t.slice(Math.min(4,t.length));let s=o.join(", "),l="";if(i.length>0&&(l=`, ${i.join(", ")}`),(s+l).length<90&&n.length>0){const t=["Unique","Custom","Handmade","Perfect","High Quality"].filter((t=>!s.toLowerCase().includes(t.toLowerCase())));t.length>0&&(l+=`, ${t[0]} Gift`)}return{title:h(s+l),explanation:"Standard template with most important keywords first"}}function m(t,e,n){const o=["Perfect Gift","Home Decor","Special Occasion","Unique Present"];let i=`${o[Math.floor(Math.random()*o.length)]}, ${t.slice(0,Math.min(3,t.length)).join(", ")}`;const s=t.slice(Math.min(3,t.length));let l="";s.length>0&&(l=`, ${s.join(", ")}`);return{title:h(i+l),explanation:"Benefit-first template highlighting a use case or occasion"}}function f(t,e,n){const o=["Wood","Ceramic","Metal","Glass","Leather","Cotton","Wool","Acrylic","Vinyl"];let i=null;for(const n of o)if(t.some((t=>t.toLowerCase().includes(n.toLowerCase())))||e.some((t=>t.toLowerCase()===n.toLowerCase()))){i=n;break}if(!i)return null;const s=t.find((t=>t.split(" ").length>1))||t[0];let l=`${i} ${s}`;l.toLowerCase()!==s.toLowerCase()?l+=", ":l=s+", ";const r=t.filter((t=>t.toLowerCase()!==s.toLowerCase()&&!t.toLowerCase().includes(i.toLowerCase()))),a=r.slice(0,Math.min(3,r.length)).join(", "),c=r.slice(Math.min(3,r.length)).join(", ");return{title:h(l+a+(c?`, ${c}`:"")),explanation:"Material-first template emphasizing product construction"}}function p(t,e,n){const o=["Modern","Rustic","Vintage","Minimalist","Bohemian","Industrial","Traditional","Contemporary"];let i=null;for(const s of o)if(t.some((t=>t.toLowerCase().includes(s.toLowerCase())))||e.some((t=>t.toLowerCase()===s.toLowerCase()))||n.some((t=>t.toLowerCase()===s.toLowerCase()))){i=s;break}if(!i)return null;const s=t.find((t=>t.split(" ").length>1))||t[0];let l=`${i} ${s}`;l.toLowerCase()!==s.toLowerCase()?l+=", ":l=s+", ";const r=t.filter((t=>t.toLowerCase()!==s.toLowerCase()&&!t.toLowerCase().includes(i.toLowerCase()))),a=r.slice(0,Math.min(3,r.length)).join(", "),c=r.slice(Math.min(3,r.length)).join(", ");return{title:h(l+a+(c?`, ${c}`:"")),explanation:"Style-first template highlighting design aesthetic"}}o.addEventListener("input",(function(){i.textContent=this.value.length,this.value.length>140?i.style.color="red":i.style.color="#757575"})),n&&n.addEventListener("click",a),e&&e.addEventListener("keypress",(function(t){"Enter"===t.key&&(a(),t.preventDefault())})),s&&s.addEventListener("click",(function(){if(0===tags.length)return void alert("Please add at least one tag to generate title suggestions.");const t=o.value.trim(),e=document.getElementById("productDescription").value.trim(),n=function(t,e,n){const o=[...e].sort(((t,e)=>{const n=t.split(" ").length,o=e.split(" ").length;return n>1&&1===o?-1:1===n&&o>1?1:t.length-e.length})),i=t?d(t):[],s=n?d(n):[];let l=[g(o,i,s),m(o,i,s),f(o,i,s),p(o,i,s)].filter(Boolean);return l=l.map((t=>{let e=function(t){const e=function(t){const e=t.toLowerCase().replace(/[^\w\s]/g," ").split(/\s+/).filter((t=>t.length>2)),n={};e.forEach((t=>{n[t]=(n[t]||0)+1}));const o=Object.keys(n).filter((t=>n[t]>2)).map((t=>({word:t,count:n[t]})));return{hasExcessiveRepetition:o.length>0,repeatedWords:o,wordFrequency:n}}(t);if(!e.hasExcessiveRepetition)return t;let n=t;return e.repeatedWords.forEach((({word:t,count:e})=>{if(e>2){const e=new RegExp(`\\b${t}\\b`,"gi"),o=[...n.matchAll(e)];if(o.length>2)for(let e=o.length-1;e>=2;e--){const i=o[e].index,s=i+t.length,l=n.lastIndexOf(",",i)+1||0,r=n.indexOf(",",s),a=n.substring(l,r>-1?r:n.length).trim();if(a.split(/\s+/).length>1){const t=n.charAt(i-1),e=n.charAt(s);n=" "===t&&" "===e?n.slice(0,i)+n.slice(s+1):" "===t?n.slice(0,i-1)+n.slice(s):n.slice(0,i)+n.slice(s)}else if(a.toLowerCase()===t.toLowerCase()){const t=n.indexOf(",",l);n=-1===t?n.slice(0,l?l-1:0):n.slice(0,l?l-1:0)+n.slice(t)}}}})),n}(t.title);const n=u(e);let o=function(t,e=6){if(u(t)<=e)return t;let n=-1,o=0;for(let i=0;i<t.length;i++)if(","===t[i]&&(o++,o===e)){n=i;break}if(-1!==n)return t.substring(0,n+1)+t.substring(n+1).replace(/,/g,"");return t}(e);const i=n>6,s=o.length;let l=function(t,e=140){if(t.length<=e)return t;const n=t.lastIndexOf(",",e);if(-1!==n&&n>.75*e)return t.substring(0,n);{let n=t.substring(0,e);const o=n.lastIndexOf(" ");return-1!==o&&o>.9*e&&(n=n.substring(0,o)),n}}(o);const r=s>140;let a=t.explanation;return e!==t.title&&(a+=" (repetition removed)"),i&&(a+=" (commas limited to 6)"),r&&(a+=" (truncated to 140 chars)"),{...t,title:l,explanation:a}})),l}(t,tags,e);!function(t){if(l.innerHTML="<h3>Optimized Title Suggestions</h3>",0===t.length)return void(l.innerHTML+="<p>Unable to generate title suggestions. Please add more descriptive tags.</p>");t.forEach(((t,e)=>{const n=document.createElement("div");n.className="title-result";const o=document.createElement("button");o.className="copy-btn",o.textContent="Copy",o.addEventListener("click",(function(){navigator.clipboard.writeText(t.title).then((()=>{this.textContent="Copied!",setTimeout((()=>{this.textContent="Copy"}),2e3)}))}));const i=`\n                        <div>\n                            <strong>Option ${e+1}:</strong><br>\n                            <span class="first-60">${t.title.slice(0,60)}</span>${t.title.slice(60)}\n                        </div>\n                        <div class="char-count">${t.title.length}/140 characters</div>\n                        <p><em>${t.explanation}</em></p>\n                    `;n.innerHTML=i,n.appendChild(o),l.appendChild(n)}));const e=document.createElement("div");e.className="tip",e.innerHTML='\n                    <h3>Title Tips</h3>\n                    <ul>\n                        <li>Choose the title that best describes your product while maintaining keyword focus</li>\n                        <li>All titles place important keywords in the first 60 characters (highlighted in blue)</li>\n                        <li>Consider adding seasonal keywords if relevant (e.g., "Valentine\'s Gift", "Christmas Decoration")</li>\n                        <li>Remember to update your tags to match keywords in your title</li>\n                    </ul>\n                ',l.appendChild(e)}(n),switchTab("results-tab",document.querySelector(".tab:nth-child(2)"))}))}));
 
 
 

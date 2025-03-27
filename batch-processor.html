@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch CSV Etsy Listing Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .batch-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #f5f5f5;
+        }
+        
+        .upload-area.active {
+            border-color: #F56400;
+            background-color: #fff8e1;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        #uploadLabel {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #F56400;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        #uploadLabel:hover {
+            background-color: #E05800;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            width: 100%;
+            background-color: #eee;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        
+        table th, table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        table th {
+            background-color: #f0f0f0;
+            position: sticky;
+            top: 0;
+        }
+        
+        .results-area {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .column-mapping {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .mapping-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .mapping-item label {
+            min-width: 100px;
+        }
+        
+        .instructions {
+            background-color: #fff8e1;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .sample-format {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Batch CSV Etsy Listing Analyzer</h1>
+    
+    <p>Upload a CSV file with your Etsy listings to analyze them in bulk to receive report.</p>
+    <p>        <a href="csv/etsy-input-template.csv" class="csv-template">Download CSV Template</a>
+    </p>
+    
+   
+    
+    <div class="batch-section">
+        <h2>Upload Your CSV File</h2>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>Drag and drop your CSV file here</p>
+            <p>- or -</p>
+            <label for="fileInput" id="uploadLabel">Choose File</label>
+            <input type="file" id="fileInput" accept=".csv">
+            <p id="fileInfo">No file selected</p>
+            <a href="example-input-2.csv" class="tool-link" style="display: inline-block; margin-top: 20px;">
+                Download sample CSV
+            </a>
+        </div>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <button id="analyzeBtn" disabled>Analyze Listings</button>
+        <button id="downloadBtn" style="display: none;">Download Results</button>
+    </div>
+    
+    <div class="results-area" id="resultsArea" style="display: none;">
+        <h2>Analysis Results</h2>
+        <p><span id="totalAnalyzed">0</span> listings analyzed. <a href="#" id="downloadLink">Download full results as CSV</a></p>
+        
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Overall Score</th>
+                    <th>Title Score</th>
+                    <th>Tags Score</th>
+                    <th>Desc. Score</th>
+                    <th>Focus Keywords</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- Results will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        // Initialize global tags array to prevent errors
+        window.tags = [];
+    </script>
+    <script src="etsygrade.js"></script>
+    <script src="etsy-batch.js"></script>
+</body>
+</html>
