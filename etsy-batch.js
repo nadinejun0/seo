@@ -148,8 +148,12 @@
                                 obj[headers[j]] = '';
                             }
                             
-                            // Only add if we have the required fields
-                            if (obj['Title'] && obj['Tags'] && obj['Description']) {
+                            // Include any row that has at least one non-empty field
+                            if (obj['Title'] || obj['Tags'] || obj['Description']) {
+                                // Ensure all fields exist (even if empty)
+                                obj['Title'] = obj['Title'] || '';
+                                obj['Tags'] = obj['Tags'] || '';
+                                obj['Description'] = obj['Description'] || '';
                                 result.push(obj);
                             }
                         }
@@ -288,8 +292,9 @@
             const tagsInput = listing.Tags || listing.tags;
             const description = listing.Description || listing.description;
             
-            if (!title || !tagsInput || !description) {
-                console.warn('Missing required fields for listing:', listing);
+            // Process even if some fields are empty, but log a warning
+            if (!title && !tagsInput && !description) {
+                console.warn('All fields empty for listing:', listing);
                 return {
                     ...listing,
                     "Overall Score": "0.00",
@@ -297,7 +302,22 @@
                     "Tag Score": "0.00",
                     "Des. Score": "0.00",
                     "Focus Keyword Tags": "",
+                    "Analysis Note": "Empty row"
                 };
+            }
+            
+            // If any fields are missing, use empty strings
+            const processTitle = title || '';
+            const processTagsInput = tagsInput || '';
+            const processDescription = description || '';
+            
+            // Log a warning if any fields are empty
+            if (!processTitle || !processTagsInput || !processDescription) {
+                console.warn('Some fields missing for listing:', {
+                    hasTitle: !!processTitle,
+                    hasTags: !!processTagsInput,
+                    hasDescription: !!processDescription
+                });
             }
             
             // Backup the current global tags and then clear them
@@ -305,9 +325,9 @@
             window.tags = [];
             
             // Split the tags string, trim each tag, and add to the tags array
-            const tagList = tagsInput.split(',')
+            const tagList = processTagsInput ? processTagsInput.split(',')
                 .map(tag => tag.trim())
-                .filter(tag => tag && tag.length <= 20);
+                .filter(tag => tag && tag.length <= 20) : [];
             
             console.log('Processing tags:', tagList);
                 
@@ -321,17 +341,34 @@
             console.log('Final tags array:', window.tags);
             
             // Calculate scores
-            console.log('Calculating scores for title:', title.substring(0, 30) + '...');
+            console.log('Calculating scores for title:', processTitle ? processTitle.substring(0, 30) + '...' : '(empty title)');
             console.log('Tags for scoring:', window.tags);
             
             // Explicitly prepare the title for focus keyword detection
-            const cleanedTitle = title.substring(0, 60).toLowerCase().replace(/[,.|\-:;'"!?()]/g, ' ').replace(/\s+/g, ' ').trim();
-            console.log('Cleaned title for keyword matching:', cleanedTitle);
+            // Allow special characters used in international tags and trademarks/copyright symbols
+            // Keep: apostrophes, hyphens, trademark/copyright symbols (™©), and accented characters
+            // Remove: commas, periods, pipes, colons, semicolons, quotes, question marks, parentheses
+            const cleanedTitle = processTitle ? processTitle.substring(0, 60).toLowerCase()
+                .replace(/[,.|:;"!?()]/g, ' ') // Remove punctuation except apostrophes, hyphens
+                .replace(/\s+/g, ' ')
+                .trim() : '';
+                
+            // Create a version without hyphens for comparison
+            const cleanedTitleWithoutHyphens = cleanedTitle 
+                ? cleanedTitle.replace(/-/g, ' ').replace(/\s+/g, ' ').trim() 
+                : '';
+                
+            console.log('Cleaned title with hyphens:', cleanedTitle);
+            console.log('Cleaned title without hyphens:', cleanedTitleWithoutHyphens);
             
             // Manually detect matching keywords for debug purposes
             const matchingTagsDebug = [];
             window.tags.forEach(tag => {
                 const cleanTag = tag.toLowerCase();
+                
+                // Only exact matches count as focus keywords - exact phrases only
+                // "balmoral sage" will only match if "balmoral sage" appears in title
+                // "balmoral - sage" will NOT match "balmoral sage"
                 if (cleanedTitle.includes(cleanTag)) {
                     console.log('Found matching tag in title:', tag);
                     matchingTagsDebug.push(tag);
@@ -339,11 +376,16 @@
             });
             console.log('Manually detected focus keywords:', matchingTagsDebug);
             
-            const titleScore = calculateTitleScore(title);
+            // Calculate scores only if we have data
+            const titleScore = processTitle ? calculateTitleScore(processTitle) : { 
+                score: 0, charCountScore: 0, focusKeywordScore: 0, redundancyScore: 0, 
+                commaScore: 0, matchingKeywords: [] 
+            };
+            
             console.log('Title score calculated:', titleScore.score, 'Focus keywords:', titleScore.matchingKeywords);
             
             // If matchingKeywords is empty but we found matches manually, override it
-            if ((!titleScore.matchingKeywords || titleScore.matchingKeywords.length === 0) && matchingTagsDebug.length > 0) {
+            if (processTitle && (!titleScore.matchingKeywords || titleScore.matchingKeywords.length === 0) && matchingTagsDebug.length > 0) {
                 console.log('Overriding empty matchingKeywords with manually detected keywords');
                 titleScore.matchingKeywords = matchingTagsDebug;
                 titleScore.focusKeywords = matchingTagsDebug.length;
@@ -356,15 +398,22 @@
                 // 4+ keywords = 1.2 points (max)
                 titleScore.focusKeywordScore = Math.min(0.3 * matchingTagsDebug.length, 1.2);
                 
-                // Adjust the overall title score to reflect the updated focus keyword score
+                // adjust the overall title score to reflect the updated focus keyword score
                 titleScore.score = titleScore.charCountScore + titleScore.focusKeywordScore + 
                                   titleScore.redundancyScore + titleScore.commaScore;
                 
                 console.log('Updated title score after focus keyword adjustment:', titleScore.score);
             }
             
-            const tagScore = calculateTagsScore(window.tags);
-            const descriptionScore = calculateDescriptionScore(description, title);
+            const tagScore = window.tags.length > 0 ? calculateTagsScore(window.tags) : {
+                score: 0, tagCountScore: 0, multiWordScore: 0, qualityScore: 0, diversityScore: 0 
+            };
+            
+            
+            const descriptionScore = processDescription ? 
+                calculateDescriptionScore(processDescription, processTitle) : {
+                score: 0, lengthScore: 0, formattingScore: 0, keywordScore: 0, keywordsFound: [], keywordsMissing: []
+            };
             
             // Ensure the title score is correctly calculated with all components
             const titleScoreFinal = 
@@ -400,25 +449,33 @@
             const result = {
                 "Overall Score": overallScore.toFixed(2),
                 "Title Score": titleScore.score.toFixed(2),
-                "Title": title,
+                "Title": processTitle,
                 "title_char (1.2)": titleScore.charCountScore.toFixed(1),
                 "title_focus (1.2)": titleScore.focusKeywordScore ? titleScore.focusKeywordScore.toFixed(1) : "0.0",
                 "title_redun (0.8)": titleScore.redundancyScore.toFixed(1),
                 "title_comma (0.8)": titleScore.commaScore.toFixed(1),
                 "Tag Score": tagScore.score.toFixed(2),
-                "Tags": tagsInput,
+                "Tags": processTagsInput,
                 "Focus Keyword Tags": Array.isArray(titleScore.matchingKeywords) && titleScore.matchingKeywords.length > 0 
                     ? titleScore.matchingKeywords.join(',') 
                     : '',
+                // Add information for incomplete records
+                "Incomplete": (!title || !tagsInput || !description) ? "Yes" : "No",
                 "tag_count (1.0)": tagScore.tagCountScore.toFixed(1),
                 "tag_ratio (1.0)": tagScore.multiWordScore.toFixed(1),
                 "tag_qual (1.0)": tagScore.qualityScore.toFixed(1),
                 "tag_diver (1.0)": tagScore.diversityScore.toFixed(1),
                 "Des. Score": descriptionScore.score.toFixed(2),
-                "Description": description,
+                "Description": processDescription,
                 "des_length (1.2)": descriptionScore.lengthScore.toFixed(1),
                 "des_form (1.2)": descriptionScore.formattingScore.toFixed(1),
                 "des_keyword (1.6)": descriptionScore.keywordScore.toFixed(1),
+                // Add missing fields
+                "Missing Fields": [
+                    !title ? "Title" : "",
+                    !tagsInput ? "Tags" : "",
+                    !description ? "Description" : ""
+                ].filter(Boolean).join(", "),
             };
             
             // Restore the original tags
@@ -439,7 +496,8 @@
                 'Tag Score', 'Tags', 'Focus Keyword Tags',
                 'tag_count (1.0)', 'tag_ratio (1.0)', 'tag_qual (1.0)', 'tag_diver (1.0)',
                 'Des. Score', 'Description',
-                'des_length (1.2)', 'des_form (1.2)', 'des_keyword (1.6)'
+                'des_length (1.2)', 'des_form (1.2)', 'des_keyword (1.6)',
+                'Incomplete', 'Missing Fields'
             ];
             
             // Create CSV header row

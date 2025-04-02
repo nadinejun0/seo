@@ -60,17 +60,18 @@ Scoring:
 ≥0.8 (80%) ratio: 1.0 point
 0.6-0.79 (60-79%) ratio: 0.75 points
 0.4-0.59 (40-59%) ratio: 0.5 points
-<0.4 ratio (less than 40%): 0.25 points
+<0.4 ratio (less than 40%): 0.2 points
 `
 Description Scoring (1-4)
 On Etsy, product descriptions can be up to 102,400 characters, but the first 160 characters are most visible, so prioritize keywords there.
 Length and Detail (1.2 points)
 Definition: Total word count in description
 Scoring:
-160+ characters
-100-159 words: 0.9 points
-50-99 words: 0.6 points
-<50 
+160+ characters: 1.0
+100-159 characters: 0.9 points
+50-99 characters: 0.6 points
+<50 characters:  0.3 points
+
 Structural Formatting (1.2 points)
 Definition: Use of formatting elements for readability
 Presence of any of these list formats:
