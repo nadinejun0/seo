@@ -43,14 +43,15 @@ function analyzeEtsyListing() {
     const e = titleInput.value.trim(),
         t = descriptionInput.value.trim();
         
-    // Calculate all scores with additional error checking
+    // track scores for title (n), tags (s), description (a)
     let n, s, a;
     
-    // Step 1: Get the tags score first
+    // Step 1- process tags score with error handling
     try {
         s = calculateTagsScore(tags);
     } catch(err) {
         console.error("Error calculating tag score:", err);
+        // fallback to zero scores
         s = { 
             score: 0, 
             tagCount: 0,
@@ -66,11 +67,12 @@ function analyzeEtsyListing() {
     }
     console.log("Tag score calculated:", s);
     
-    // Step 2: Calculate title score
+    // step 2-  Process title score with error handling
     try {
         n = calculateTitleScore(e);
     } catch(err) {
         console.error("Error calculating title score:", err);
+        // Fallback to zero scores
         n = { 
             score: 0, 
             charCount: 0,
@@ -87,13 +89,13 @@ function analyzeEtsyListing() {
     }
     console.log("Title score calculated:", n);
     
-    // Step 3: Only now calculate description score, using the same tags array
+    // step 3- process description score with error handling
     try {
-        // First, let's get a clean deep copy of the global tags array
+        // create copy of tags for processing
         const currentTags = [...tags];
         console.log("Using tags for description score:", currentTags);
         
-        // Create a very basic description score function that mimics the title logic
+        // initialize score object
         a = {
             score: 0,
             wordCount: 0,
@@ -111,24 +113,24 @@ function analyzeEtsyListing() {
             recommendations: []
         };
         
-        // Calculate word count
+        // count words in description
         a.wordCount = t.split(/\s+/).filter(Boolean).length;
         
-        // Calculate length score using the correct length brackets
+        // score description length (higher score for longer descriptions)
         const descLength = t.length;
         if (descLength >= 1151) {
-            a.lengthScore = 1.2;
+            a.lengthScore = 1.2;  // maximum score
         } else if (descLength >= 787 && descLength <= 1150) {
-            a.lengthScore = 0.9;
+            a.lengthScore = 0.9;  // good score
         } else if (descLength >= 393 && descLength <= 786) {
-            a.lengthScore = 0.6;
+            a.lengthScore = 0.6;  // medium score
         } else if (descLength >= 160 && descLength <= 392) {
-            a.lengthScore = 0.3;
+            a.lengthScore = 0.3;  // low score
         } else {
-            a.lengthScore = 0;
+            a.lengthScore = 0;    // no points
         }
         
-        // Add formatting recommendation if needed
+        // recommend longer description if below optimal length
         if (a.lengthScore < 0.9) {
             a.recommendations.push({
                 text: "Aim for 1151+ characters in your description for maximum points",
@@ -136,21 +138,23 @@ function analyzeEtsyListing() {
             });
         }
         
-        // Check for formatting elements
+        // detect paragraph breaks and formatting
         const paragraphs = t.split(/\n\s*\n/);
         a.formattingElements.hasParagraphBreaks = paragraphs.length > 2 && 
             paragraphs.some(section => section.length < 300);
             
+        // detect bullet points and list elements
         a.formattingElements.hasListElements = /(?:^|\n)\s*(?:[\+\-\*•●►]|(?:\d+[\.\)]|[a-zA-Z][\.\)]))\s+/.test(t) || 
                                               /\*\s+\w+/.test(t) || 
                                               /(?:^|\n)\s*(?:\p{Emoji}|[✓✔☑√➢◦●►\+])\s+/u.test(t);
                                               
+        // detect markdown formatting
         a.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(t);
         
-        // Set formatting score
+        // award points for list elements
         a.formattingScore = a.formattingElements.hasListElements ? 1.2 : 0;
         
-        // Add formatting recommendations if needed
+        // suggest missing formatting elements
         if (a.formattingScore < 1.2) {
             let missingElements = [];
             if (!a.formattingElements.hasParagraphBreaks) {
@@ -171,18 +175,19 @@ function analyzeEtsyListing() {
             }
         }
         
-        // Get first 160 chars of description
+        // check for keywords in first 160 chars (most visible in search)
         const first160Chars = t.substring(0, 160).toLowerCase();
         
-        // Use the matching keywords (focus keywords) from the title
+        // use matching keywords from title analysis
         const focusKeywords = n.matchingKeywords;
         console.log("Using MATCHING KEYWORDS from title:", focusKeywords);
         
-        // Check which of these focus keywords are present in the first 160 chars
+        // identify which keywords appear in description intro
         const foundKeywords = focusKeywords.filter(tag => {
             return first160Chars.includes(tag.toLowerCase());
         });
         
+        // identify which keywords are missing from intro
         const missingKeywords = focusKeywords.filter(tag => {
             return !first160Chars.includes(tag.toLowerCase());
         });
@@ -190,12 +195,12 @@ function analyzeEtsyListing() {
         a.keywordsFound = foundKeywords;
         a.keywordsMissing = missingKeywords;
         
-        // Calculate keyword score
+        // calculate keyword score based on percentage found
         a.keywordRatio = focusKeywords.length > 0 ? 
             foundKeywords.length / focusKeywords.length : 0;
         a.keywordScore = Math.min(1.6 * a.keywordRatio, 1.6);
         
-        // Add keyword recommendation if needed
+        // recommend adding missing keywords to intro
         if (a.keywordScore < 0.8) {
             a.recommendations.push({
                 text: "Include these focus keywords from your title in the first 160 characters of your description:",
@@ -203,7 +208,7 @@ function analyzeEtsyListing() {
             });
         }
         
-        // Calculate final score
+        // sum individual scores for total description score
         a.score = a.lengthScore + a.formattingScore + a.keywordScore;
         
     } catch(err) {
@@ -234,6 +239,7 @@ function analyzeEtsyListing() {
 }
 
 function calculateTitleScore(e) {
+    // initialize title score object with all metrics
     const t = {
         score: 0,
         charCount: e.length,
@@ -251,44 +257,38 @@ function calculateTitleScore(e) {
     e.length >= 70 && e.length <= 140 ? t.charCountScore = 1.2 : e.length >= 50 && e.length < 70 ? t.charCountScore = .6 : t.charCountScore = .3, t.charCountScore < 1.2 && t.recommendations.push({
         text: "Aim for 70-140 characters in your title",
         pills: []
-    }); // Remove punctuation/separators from title for better keyword matching
-    // Process the title for focus keyword detection
-    // Create two versions of the title - one with hyphens preserved, one with hyphens converted to spaces
+    }); 
+    
+    // process title for keyword matching (preserve hyphens)
     const titleWithHyphens = e.substring(0, 60).toLowerCase()
-        .replace(/[,.|:;"!?()]/g, ' ') // Remove punctuation except apostrophes, hyphens
+        .replace(/[,.|:;"!?()]/g, ' ') // keep apostrophes and hyphens
         .replace(/\s+/g, ' ')
         .trim();
 
+    // alternative version with hyphens converted to spaces
     const titleWithoutHyphens = titleWithHyphens
-        .replace(/-/g, ' ') // Convert hyphens to spaces
-        .replace(/\s+/g, ' ') // Normalize spaces again
+        .replace(/-/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 
     console.log('Title processed with hyphens:', titleWithHyphens);
     console.log('Title processed without hyphens:', titleWithoutHyphens);
 
-    // Ensure tags is always an array
+    // ensure tags array is valid
     const tagsArray = Array.isArray(tags) ? tags : [];
 
-    // Only exact matches count as focus keywords - exact phrases only
-    // "balmoral sage" will only match if "balmoral sage" appears in title
-    // "balmoral - sage" will NOT match "balmoral sage"
+    // find exact phrase matches between tags and title
     let s = tagsArray.filter(tag => {
         const cleanTag = tag.toLowerCase();
         return titleWithHyphens.includes(cleanTag);
     });
 
-
-    // Always ensure matchingKeywords is a valid array
+    // store matching keywords
     t.matchingKeywords = Array.isArray(s) ? s : [];
     t.focusKeywords = t.matchingKeywords.length;
 
-    // Calculate focus keyword score based on the number of matching keywords
-    // 0 keywords = 0.0 points
-    // 1 keyword = 0.3 points
-    // 2 keywords = 0.6 points
-    // 3 keywords = 0.9 points
-    // 4+ keywords = 1.2 points (max)
+    // scoring: 0.3 points per keyword (max 1.2)
+    // 0 keywords = 0 points, 1 = 0.3, 2 = 0.6, 3 = 0.9, 4+ = 1.2
     t.focusKeywordScore = Math.min(.3 * t.focusKeywords, 1.2);
 
     if (t.focusKeywordScore < .3) {
@@ -321,6 +321,7 @@ function calculateTitleScore(e) {
 }
 
 function calculateTagsScore(e) {
+    // initialize tag score object
     const t = {
         score: 0,
         tagCount: e.length,
@@ -366,16 +367,18 @@ function calculateTagsScore(e) {
 }
 
 function calculateDescriptionScore(e, t, focusKeywords) {
+    // log function call parameters
     console.log("calculateDescriptionScore called with:", {
         description: e ? e.substring(0, 50) + "..." : "empty",
         title: t ? t.substring(0, 50) + "..." : "empty"
     });
     
-    // DEBUGGING: Print the exact focus keywords being passed in
+    // verify keywords parameter type
     console.log("FOCUS KEYWORDS PASSED TO FUNCTION:", focusKeywords);
     console.log("FOCUS KEYWORDS TYPE:", typeof focusKeywords);
     console.log("IS ARRAY:", Array.isArray(focusKeywords));
     
+    // initialize description score object
     const n = {
         score: 0,
         wordCount: 0,
@@ -393,16 +396,18 @@ function calculateDescriptionScore(e, t, focusKeywords) {
         recommendations: []
     };
     
-    // Calculate word count
+    // count words in description
     n.wordCount = e.split(/\s+/).filter(Boolean).length;
     
-    // Calculate length score
+    // get character count for scoring
     const s = e.length;
+    
+    // log description details for debugging
     console.log("SINGLE SCORE TOOL - Description length:", s);
     console.log("SINGLE SCORE TOOL - First 100 chars:", JSON.stringify(e.substring(0, 100)));
     console.log("SINGLE SCORE TOOL - Newline count:", (e.match(/\n/g) || []).length);
     
-    // Add character breakdown for comparison with batch processor
+    // character breakdown for batch processor comparison
     const whitespaceCount = (e.match(/\s/g) || []).length;
     const alphanumCount = (e.match(/[a-zA-Z0-9]/g) || []).length;
     const punctCount = (e.match(/[.,;:!?'"()[\]{}]/g) || []).length;
@@ -471,22 +476,20 @@ function calculateDescriptionScore(e, t, focusKeywords) {
     // Get the first 160 chars of description for keyword checking
     const first160Chars = e.substring(0, 160).toLowerCase();
     
-    // DEBUGGING - extra info about tags array
+    // log available tags
     console.log("Global tags array:", tags);
     
-    // Determine which focus keywords to use - SIMPLER VERSION
-    // Just use what was passed in, with a fallback for safety
+    // use provided keywords with array validation
     const tagsArray = Array.isArray(focusKeywords) ? focusKeywords : [];
     console.log("Final tags array for analysis:", tagsArray);
     
-    // Use the exact same matching logic as the title focus keywords
-    // Simple substring matches - consistent with how title focus keywords are checked
+    // check which keywords appear in first 160 chars
     const r = tagsArray.filter(tag => {
         const tagLower = tag.toLowerCase();
         return first160Chars.includes(tagLower);
     });
     
-    // Words not found get added to missing list
+    // create list of keywords missing from intro
     const l = tagsArray.filter(tag => !r.includes(tag));
     
     // Set the results and calculate score
@@ -513,7 +516,7 @@ function calculateDescriptionScore(e, t, focusKeywords) {
 function getGrade(e) {
     return e >= 3.5 ? "A" : e >= 2.5 ? "B" : e >= 1.5 ? "C" : "D"
 }
-// Add a custom function to test description keyword matching with specific focus keywords
+// custom function to test description keyword matching with specific focus keywords
 // For quick testing of specific focus keywords with description
 function testDescriptionWithFocusKeywords(description, focusKeywords) {
     if (!Array.isArray(focusKeywords)) {
@@ -558,7 +561,7 @@ if (document.getElementById("copyTagsBtn")) document.getElementById("copyTagsBtn
     const e = titleInput.value.trim(),
         t = descriptionInput.value.trim();
         
-    // Check for batchDescription in localStorage for comparison
+    // optional comparison with batch processor data
     try {
         const batchDescription = localStorage.getItem('batchDescription');
         if (batchDescription) {
@@ -567,6 +570,7 @@ if (document.getElementById("copyTagsBtn")) document.getElementById("copyTagsBtn
             if (typeof analyzeStringDifferences === 'function') {
                 analyzeStringDifferences(batchDescription, t);
             } else {
+                // fallback to basic length comparison
                 console.log('COMPARE - Batch length:', batchDescription.length);
                 console.log('COMPARE - Single length:', t.length);
                 console.log('COMPARE - Difference:', batchDescription.length - t.length);
@@ -575,9 +579,11 @@ if (document.getElementById("copyTagsBtn")) document.getElementById("copyTagsBtn
     } catch (e) {
         console.error('Error comparing descriptions:', e);
     }
+    
     console.log("Title:", e);
     console.log("Description:", t);
     console.log("Tags:", tags);
+    
     try {
         e && t && 0 !== tags.length ? analyzeEtsyListing() : alert("Please fill in all fields and add at least one tag.");
     } catch (error) {
