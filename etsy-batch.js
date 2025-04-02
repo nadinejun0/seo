@@ -85,6 +85,12 @@
         
         // Parse CSV function with robust handling of line breaks and quotes
         function parseCSV(text) {
+            // Log some info about the CSV text being parsed
+            console.log('CSV text length:', text.length);
+            console.log('First 100 chars of CSV:', JSON.stringify(text.substring(0, 100)));
+            console.log('Number of newlines in CSV:', (text.match(/\n/g) || []).length);
+            console.log('Number of quotes in CSV:', (text.match(/"/g) || []).length);
+            
             const result = [];
             const headers = [];
             let currentLine = [];
@@ -140,7 +146,12 @@
                             const minLength = Math.min(headers.length, currentLine.length);
                             
                             for (let j = 0; j < minLength; j++) {
-                                obj[headers[j]] = currentLine[j].trim();
+                                // Don't trim the Description field - preserve all whitespace and newlines
+                                if (headers[j] === 'Description') {
+                                    obj[headers[j]] = currentLine[j];
+                                } else {
+                                    obj[headers[j]] = currentLine[j].trim();
+                                }
                             }
                             
                             // Add default values for missing fields
@@ -159,6 +170,16 @@
                         }
                         
                         currentLine = [];
+                    }
+                }
+                // Handle newlines INSIDE quoted fields (preserve them)
+                else if ((char === '\r' || char === '\n') && inQuotes) {
+                    // Keep the newline character in the field
+                    currentField += '\n';
+                    
+                    // Skip the \n in \r\n sequences
+                    if (char === '\r' && nextChar === '\n') {
+                        i++;
                     }
                 }
                 // Normal character
@@ -306,10 +327,24 @@
                 };
             }
             
+            
             // If any fields are missing, use empty strings
             const processTitle = title || '';
             const processTagsInput = tagsInput || '';
+            // Make sure to preserve all newlines in the description
             const processDescription = description || '';
+            
+            // Log raw description to debug character count issues
+            console.log('Raw description from CSV:', processDescription);
+            console.log('Raw description length:', processDescription.length);
+            
+            // Store this description in local storage for comparison
+            try {
+                localStorage.setItem('batchDescription', processDescription);
+                console.log('Stored description in localStorage for comparison');
+            } catch (e) {
+                console.error('Failed to store description for comparison:', e);
+            }
             
             // Log a warning if any fields are empty
             if (!processTitle || !processTagsInput || !processDescription) {
@@ -410,10 +445,146 @@
             };
             
             
-            const descriptionScore = processDescription ? 
-                calculateDescriptionScore(processDescription, processTitle) : {
-                score: 0, lengthScore: 0, formattingScore: 0, keywordScore: 0, keywordsFound: [], keywordsMissing: []
+            // We need to create our own description score using the matching keywords from the title
+            let descriptionScore = {
+                score: 0, 
+                wordCount: 0,
+                lengthScore: 0,
+                formattingElements: {
+                    hasParagraphBreaks: false,
+                    hasListElements: false,
+                    hasFormatting: false
+                },
+                formattingScore: 0,
+                keywordRatio: 0,
+                keywordScore: 0,
+                keywordsFound: [],
+                keywordsMissing: [],
+                recommendations: []
             };
+            
+            if (processDescription) {
+                try {
+                    // 1. Calculate word count
+                    descriptionScore.wordCount = processDescription.split(/\s+/).filter(Boolean).length;
+                    
+                    // 2. Calculate length score
+                    // Log the raw description for debugging
+                    console.log('Raw description:', processDescription.substring(0, 50) + '...');
+                    
+                    // Calculate length after trimming to ensure consistent measurement
+                    const descLength = processDescription.length;
+                    console.log('DESCRIPTION LENGTH:', descLength, 'characters');
+                    
+                    // Check for missing newlines
+                    const newlineCount = (processDescription.match(/\n/g) || []).length;
+                    const crCount = (processDescription.match(/\r/g) || []).length;
+                    console.log('Newline counts: \\n =', newlineCount, '\\r =', crCount);
+                    
+                    // Check if description has any ASCII/Unicode issues
+                    const specialChars = processDescription.match(/[^\x20-\x7E]/g) || [];
+                    console.log('Special characters found:', specialChars.length, 'chars');
+                    
+                    // Display the first 100 characters literally
+                    console.log('First 100 chars of description:', 
+                                JSON.stringify(processDescription.substring(0, 100)));
+                                
+                    // Count character categories for debugging
+                    const whitespaceCount = (processDescription.match(/\s/g) || []).length;
+                    const alphanumCount = (processDescription.match(/[a-zA-Z0-9]/g) || []).length;
+                    const punctCount = (processDescription.match(/[.,;:!?'"()[\]{}]/g) || []).length;
+                    console.log('Character breakdown:', {
+                        whitespace: whitespaceCount,
+                        alphanumeric: alphanumCount,
+                        punctuation: punctCount,
+                        other: processDescription.length - whitespaceCount - alphanumCount - punctCount
+                    });
+                    
+                    // Check specific character sequences that might cause issues
+                    const bulletPoints = (processDescription.match(/[•●►]/g) || []).length;
+                    console.log('Bullet points found:', bulletPoints);
+                    
+                    // Display actual characters for debugging
+                    const charCodes = Array.from(processDescription.substring(0, 50))
+                        .map(char => char.charCodeAt(0).toString(16).padStart(4, '0')).join(' ');
+                    console.log('First 50 character codes:', charCodes);
+                    
+                    // Debug comparative lengths
+                    const normalizedDesc = processDescription.normalize('NFC');
+                    console.log('Normalized description length:', normalizedDesc.length);
+                    console.log('Original vs Normalized length diff:', 
+                                processDescription.length - normalizedDesc.length);
+                    
+                    // Apply scoring based on exact length
+                    if (descLength >= 1151) {
+                        descriptionScore.lengthScore = 1.2;
+                        console.log('Description Length Score: 1.2 (≥1151 chars)');
+                    } else if (descLength >= 787 && descLength <= 1150) {
+                        descriptionScore.lengthScore = 0.9;
+                        console.log('Description Length Score: 0.9 (787-1150 chars)');
+                    } else if (descLength >= 393 && descLength <= 786) {
+                        descriptionScore.lengthScore = 0.6;
+                        console.log('Description Length Score: 0.6 (393-786 chars)');
+                    } else if (descLength >= 160 && descLength <= 392) {
+                        descriptionScore.lengthScore = 0.3;
+                        console.log('Description Length Score: 0.3 (160-392 chars)');
+                    } else {
+                        descriptionScore.lengthScore = 0;
+                        console.log('Description Length Score: 0.0 (<160 chars)');
+                    }
+                    
+                    // 3. Check for formatting elements
+                    const paragraphs = processDescription.split(/\n\s*\n/);
+                    descriptionScore.formattingElements.hasParagraphBreaks = paragraphs.length > 2 && 
+                        paragraphs.some(section => section.length < 300);
+                        
+                    descriptionScore.formattingElements.hasListElements = /(?:^|\n)\s*(?:[\+\-\*•●►]|(?:\d+[\.\)]|[a-zA-Z][\.\)]))\s+/.test(processDescription) || 
+                                                  /\*\s+\w+/.test(processDescription) || 
+                                                  /(?:^|\n)\s*(?:\p{Emoji}|[✓✔☑√➢◦●►\+])\s+/u.test(processDescription);
+                                                  
+                    descriptionScore.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(processDescription);
+                    
+                    // Set formatting score
+                    descriptionScore.formattingScore = descriptionScore.formattingElements.hasListElements ? 1.2 : 0;
+                    
+                    // 4. Get the first 160 chars of description
+                    const first160Chars = processDescription.substring(0, 160).toLowerCase();
+                    
+                    // 5. Use the matching keywords from the title
+                    // These are the focus keywords that appeared in the title
+                    const focusKeywords = titleScore.matchingKeywords || [];
+                    
+                    // 6. Check which of these focus keywords are present in the first 160 chars
+                    descriptionScore.keywordsFound = focusKeywords.filter(tag => {
+                        return first160Chars.includes(tag.toLowerCase());
+                    });
+                    
+                    descriptionScore.keywordsMissing = focusKeywords.filter(tag => {
+                        return !first160Chars.includes(tag.toLowerCase());
+                    });
+                    
+                    // 7. Calculate keyword score
+                    descriptionScore.keywordRatio = focusKeywords.length > 0 ? 
+                        descriptionScore.keywordsFound.length / focusKeywords.length : 0;
+                    descriptionScore.keywordScore = Math.min(1.6 * descriptionScore.keywordRatio, 1.6);
+                    
+                    // 8. Calculate final score
+                    descriptionScore.score = descriptionScore.lengthScore + 
+                                           descriptionScore.formattingScore + 
+                                           descriptionScore.keywordScore;
+                    
+                    // Log final description scores for debugging
+                    console.log('Final Description Scores:', {
+                        length: descriptionScore.lengthScore,
+                        formatting: descriptionScore.formattingScore,
+                        keywords: descriptionScore.keywordScore,
+                        total: descriptionScore.score
+                    });
+                    
+                } catch (err) {
+                    console.error("Error calculating batch description score:", err);
+                }
+            }
             
             // Ensure the title score is correctly calculated with all components
             const titleScoreFinal = 
@@ -470,6 +641,10 @@
                 "des_length (1.2)": descriptionScore.lengthScore.toFixed(1),
                 "des_form (1.2)": descriptionScore.formattingScore.toFixed(1),
                 "des_keyword (1.6)": descriptionScore.keywordScore.toFixed(1),
+                // Additional debug field (reference to descLength doesn't exist in this scope)
+                "Description Length": processDescription.length + " chars",
+                // Store the full raw description for verification
+                "Raw Description": processDescription,
                 // Add missing fields
                 "Missing Fields": [
                     !title ? "Title" : "",
@@ -495,7 +670,7 @@
                 'title_char (1.2)', 'title_focus (1.2)', 'title_redun (0.8)', 'title_comma (0.8)',
                 'Tag Score', 'Tags', 'Focus Keyword Tags',
                 'tag_count (1.0)', 'tag_ratio (1.0)', 'tag_qual (1.0)', 'tag_diver (1.0)',
-                'Des. Score', 'Description',
+                'Des. Score', 'Description', 'Description Length',
                 'des_length (1.2)', 'des_form (1.2)', 'des_keyword (1.6)',
                 'Incomplete', 'Missing Fields'
             ];
@@ -507,6 +682,13 @@
             analysisResults.forEach(result => {
                 const row = orderedHeaders.map(header => {
                     let value = result[header] || '';
+                    
+                    // Make sure description length matches actual character count
+                    if (header === 'Description Length' && result['Description']) {
+                        const actualLength = result['Description'].length;
+                        value = actualLength + " chars";
+                        console.log('Final description length for CSV:', actualLength);
+                    }
                     
                     // Properly escape and quote fields
                     if (typeof value === 'string') {
@@ -547,4 +729,35 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+        
+        // Debug function to analyze character differences between batch and single methods
+        function analyzeStringDifferences(batchString, singleString) {
+            if (!batchString || !singleString) {
+                console.log('Cannot compare strings - one or both are empty');
+                return;
+            }
+            
+            console.log('COMPARE - Batch length:', batchString.length);
+            console.log('COMPARE - Single length:', singleString.length);
+            console.log('COMPARE - Length difference:', batchString.length - singleString.length);
+            
+            // Check first 10 characters in detail
+            console.log('COMPARE - First 10 batch chars:', 
+                Array.from(batchString.substring(0, 10))
+                    .map((c, i) => `${i}:"${c}"(${c.charCodeAt(0)})`).join(', '));
+            console.log('COMPARE - First 10 single chars:', 
+                Array.from(singleString.substring(0, 10))
+                    .map((c, i) => `${i}:"${c}"(${c.charCodeAt(0)})`).join(', '));
+            
+            // Check if trimming makes them match
+            const trimmedBatch = batchString.trim();
+            console.log('COMPARE - Trimmed batch length:', trimmedBatch.length);
+            console.log('COMPARE - After trim difference:', trimmedBatch.length - singleString.length);
+            
+            // Check for invisible/problematic characters
+            const invisibleCharsBatch = batchString.match(/[\x00-\x1F\x7F-\x9F\u2000-\u200F\u2028-\u202F]/g) || [];
+            const invisibleCharsSingle = singleString.match(/[\x00-\x1F\x7F-\x9F\u2000-\u200F\u2028-\u202F]/g) || [];
+            console.log('COMPARE - Invisible chars batch:', invisibleCharsBatch.length);
+            console.log('COMPARE - Invisible chars single:', invisibleCharsSingle.length);
         }

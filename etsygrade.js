@@ -46,6 +46,27 @@ function analyzeEtsyListing() {
     // Calculate all scores with additional error checking
     let n, s, a;
     
+    // Step 1: Get the tags score first
+    try {
+        s = calculateTagsScore(tags);
+    } catch(err) {
+        console.error("Error calculating tag score:", err);
+        s = { 
+            score: 0, 
+            tagCount: 0,
+            tagCountScore: 0, 
+            multiWordRatio: 0,
+            multiWordScore: 0, 
+            lowQualityTags: [],
+            qualityScore: 0, 
+            diversityRatio: 0,
+            diversityScore: 0, 
+            recommendations: [] 
+        };
+    }
+    console.log("Tag score calculated:", s);
+    
+    // Step 2: Calculate title score
     try {
         n = calculateTitleScore(e);
     } catch(err) {
@@ -66,27 +87,125 @@ function analyzeEtsyListing() {
     }
     console.log("Title score calculated:", n);
     
+    // Step 3: Only now calculate description score, using the same tags array
     try {
-        s = calculateTagsScore(tags);
-    } catch(err) {
-        console.error("Error calculating tag score:", err);
-        s = { 
-            score: 0, 
-            tagCount: 0,
-            tagCountScore: 0, 
-            multiWordRatio: 0,
-            multiWordScore: 0, 
-            lowQualityTags: [],
-            qualityScore: 0, 
-            diversityRatio: 0,
-            diversityScore: 0, 
-            recommendations: [] 
+        // First, let's get a clean deep copy of the global tags array
+        const currentTags = [...tags];
+        console.log("Using tags for description score:", currentTags);
+        
+        // Create a very basic description score function that mimics the title logic
+        a = {
+            score: 0,
+            wordCount: 0,
+            lengthScore: 0,
+            formattingElements: {
+                hasParagraphBreaks: false,
+                hasListElements: false,
+                hasFormatting: false
+            },
+            formattingScore: 0,
+            keywordRatio: 0,
+            keywordScore: 0,
+            keywordsFound: [],
+            keywordsMissing: [],
+            recommendations: []
         };
-    }
-    console.log("Tag score calculated:", s);
-    
-    try {
-        a = calculateDescriptionScore(t, e);
+        
+        // Calculate word count
+        a.wordCount = t.split(/\s+/).filter(Boolean).length;
+        
+        // Calculate length score using the correct length brackets
+        const descLength = t.length;
+        if (descLength >= 1151) {
+            a.lengthScore = 1.2;
+        } else if (descLength >= 787 && descLength <= 1150) {
+            a.lengthScore = 0.9;
+        } else if (descLength >= 393 && descLength <= 786) {
+            a.lengthScore = 0.6;
+        } else if (descLength >= 160 && descLength <= 392) {
+            a.lengthScore = 0.3;
+        } else {
+            a.lengthScore = 0;
+        }
+        
+        // Add formatting recommendation if needed
+        if (a.lengthScore < 0.9) {
+            a.recommendations.push({
+                text: "Aim for 1151+ characters in your description for maximum points",
+                pills: []
+            });
+        }
+        
+        // Check for formatting elements
+        const paragraphs = t.split(/\n\s*\n/);
+        a.formattingElements.hasParagraphBreaks = paragraphs.length > 2 && 
+            paragraphs.some(section => section.length < 300);
+            
+        a.formattingElements.hasListElements = /(?:^|\n)\s*(?:[\+\-\*•●►]|(?:\d+[\.\)]|[a-zA-Z][\.\)]))\s+/.test(t) || 
+                                              /\*\s+\w+/.test(t) || 
+                                              /(?:^|\n)\s*(?:\p{Emoji}|[✓✔☑√➢◦●►\+])\s+/u.test(t);
+                                              
+        a.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(t);
+        
+        // Set formatting score
+        a.formattingScore = a.formattingElements.hasListElements ? 1.2 : 0;
+        
+        // Add formatting recommendations if needed
+        if (a.formattingScore < 1.2) {
+            let missingElements = [];
+            if (!a.formattingElements.hasParagraphBreaks) {
+                missingElements.push("paragraph breaks");
+            }
+            if (!a.formattingElements.hasListElements) {
+                missingElements.push("bullet points");
+            }
+            if (!a.formattingElements.hasFormatting) {
+                missingElements.push("formatting (*, _, #)");
+            }
+            
+            if (missingElements.length > 0) {
+                a.recommendations.push({
+                    text: `Add ${missingElements.join(", ")} for better readability`,
+                    pills: ["• Bullet point", "* Asterisk list", "1. Numbered list"]
+                });
+            }
+        }
+        
+        // Get first 160 chars of description
+        const first160Chars = t.substring(0, 160).toLowerCase();
+        
+        // Use the matching keywords (focus keywords) from the title
+        const focusKeywords = n.matchingKeywords;
+        console.log("Using MATCHING KEYWORDS from title:", focusKeywords);
+        
+        // Check which of these focus keywords are present in the first 160 chars
+        const foundKeywords = focusKeywords.filter(tag => {
+            return first160Chars.includes(tag.toLowerCase());
+        });
+        
+        const missingKeywords = focusKeywords.filter(tag => {
+            return !first160Chars.includes(tag.toLowerCase());
+        });
+        
+        a.keywordsFound = foundKeywords;
+        a.keywordsMissing = missingKeywords;
+        
+        // Calculate keyword score
+        a.keywordRatio = focusKeywords.length > 0 ? 
+            foundKeywords.length / focusKeywords.length : 0;
+        a.keywordScore = Math.min(1.6 * a.keywordRatio, 1.6);
+        
+        // Add keyword recommendation if needed
+        if (a.keywordScore < 0.8) {
+            a.recommendations.push({
+                text: "Include these focus keywords from your title in the first 160 characters of your description:",
+                pills: a.keywordsMissing
+            });
+        }
+        
+        // Calculate final score
+        a.score = a.lengthScore + a.formattingScore + a.keywordScore;
+        
     } catch(err) {
         console.error("Error calculating description score:", err);
         a = { 
@@ -111,7 +230,7 @@ function analyzeEtsyListing() {
     // Calculate overall score
     const o = .4 * (n?.score || 0) + .4 * (s?.score || 0) + .2 * (a?.score || 0);
     let i = `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Overall Score</h3>\n                <span class="score-value grade-${getGrade(o)}">${o.toFixed(2)} (${getGrade(o)})</span>\n            </div>\n        </div>\n    `;
-    i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Title</h3>\n                <span class="score-value grade-${getGrade(n.score)}">${n.score.toFixed(2)} (${getGrade(n.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Character Count (${n.charCount})</span>\n                    <span>${n.charCountScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Focus Keywords (${n.focusKeywords})</span>\n                    <span>${n.focusKeywordScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Focus Keywords:</span>\n                    <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">\n                        ${n.matchingKeywords.map((e => `<span class="highlight" style="font-size: 12px; margin: 2px;">${e}</span>`)).join("")}\n                    </span>\n                </div>\n                <div class="score-item">\n                    <span>Redundancy</span>\n                    <span>${n.redundancyScore.toFixed(1)} / 0.8</span>\n                </div>\n                <div class="score-item">\n                    <span>Separators (${n.commas} total: ${n.separatorTypes.commas} commas, ${n.separatorTypes.pipes} pipes, ${n.separatorTypes.dashes} dashes)</span>\n                    <span>${n.commaScore.toFixed(1)} / 0.8</span>\n                </div>\n            </div>\n            <div style="margin-top: 15px;">\n                <p>First 60 Characters (focus area):</p>\n                <div style="margin-bottom: 15px;"><span class="highlight">${e.substring(0, 60)}</span>${e.substring(60)}</div>\n            </div>\n            ${n.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${n.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Tags</h3>\n                <span class="score-value grade-${getGrade(s.score)}">${s.score.toFixed(2)} (${getGrade(s.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Tag Count (${s.tagCount}/13)</span>\n                    <span>${s.tagCountScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Multi-word Ratio (${(100 * s.multiWordRatio).toFixed(0)}%)</span>\n                    <span>${s.multiWordScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Tag Quality (${0 === s.lowQualityTags.length ? "no low quality tags" : 1 === s.lowQualityTags.length ? "1 low quality tag (-0.5)" : s.lowQualityTags.length + " low quality tags (-1.0)"})</span>\n                    <span>${s.qualityScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Tag Diversity (${(100 * s.diversityRatio).toFixed(0)}% unique words - ${s.diversityRatio >= .8 ? "Excellent" : s.diversityRatio >= .6 ? "Good" : s.diversityRatio >= .4 ? "Fair" : "Poor"})</span>\n                    <span>${s.diversityScore.toFixed(1)} / 1.0</span>\n                </div>\n            </div>\n            <div style="margin-top: 15px;">\n                <div class="tag-container">\n                    ${tags.map((e => { const t = n.matchingKeywords.some((t => t.toLowerCase() === e.toLowerCase())), s = e.length < 10 && e.split(" ").length < 3; return `<div class="tag ${t ? "highlighted-tag" : s ? "low-quality-tag" : ""}">${e}</div>` })).join("")}\n                </div>\n            </div>\n            ${s.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${s.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Description</h3>\n                <span class="score-value grade-${getGrade(a.score)}">${a.score.toFixed(2)} (${getGrade(a.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Length (${t.length} characters, ${a.wordCount} words)</span>\n                    <span>${a.lengthScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Formatting (${a.formattingElements.hasListElements ? "Has lists" : "Missing lists"})</span>\n                    <span>${a.formattingScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Keyword Integration (${Math.round(100 * a.keywordRatio)}% in first 160 chars)</span>\n                    <span>${a.keywordScore.toFixed(1)} / 1.6</span>\n                </div>\n                <div class="score-item">\n                    <span>Missing keywords:</span>\n                    <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">\n                        ${a.keywordsMissing.map((e => `<span class="missing-keyword" style="font-size: 12px; margin: 2px; background-color: #e0e0e0; color: #757575; padding: 2px 6px; border-radius: 12px;">${e}</span>`)).join("")}\n                    </span>\n                </div>\n            </div>\n            ${a.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${a.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, resultsContainer.innerHTML = i
+    i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Title</h3>\n                <span class="score-value grade-${getGrade(n.score)}">${n.score.toFixed(2)} (${getGrade(n.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Character Count (${n.charCount})</span>\n                    <span>${n.charCountScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Focus Keywords (${n.focusKeywords})</span>\n                    <span>${n.focusKeywordScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Focus Keywords:</span>\n                    <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">\n                        ${n.matchingKeywords.map((e => `<span class="highlight" style="font-size: 12px; margin: 2px;">${e}</span>`)).join("")}\n                    </span>\n                </div>\n                <div class="score-item">\n                    <span>Redundancy</span>\n                    <span>${n.redundancyScore.toFixed(1)} / 0.8</span>\n                </div>\n                <div class="score-item">\n                    <span>Separators (${n.commas} total: ${n.separatorTypes.commas} commas, ${n.separatorTypes.pipes} pipes, ${n.separatorTypes.dashes} dashes)</span>\n                    <span>${n.commaScore.toFixed(1)} / 0.8</span>\n                </div>\n            </div>\n            <div style="margin-top: 15px;">\n                <p>First 60 Characters (focus area):</p>\n                <div style="margin-bottom: 15px;"><span class="highlight">${e.substring(0, 60)}</span>${e.substring(60)}</div>\n            </div>\n            ${n.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${n.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Tags</h3>\n                <span class="score-value grade-${getGrade(s.score)}">${s.score.toFixed(2)} (${getGrade(s.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Tag Count (${s.tagCount}/13)</span>\n                    <span>${s.tagCountScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Multi-word Ratio (${(100 * s.multiWordRatio).toFixed(0)}%)</span>\n                    <span>${s.multiWordScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Tag Quality (${0 === s.lowQualityTags.length ? "no low quality tags" : 1 === s.lowQualityTags.length ? "1 low quality tag (-0.5)" : s.lowQualityTags.length + " low quality tags (-1.0)"})</span>\n                    <span>${s.qualityScore.toFixed(1)} / 1.0</span>\n                </div>\n                <div class="score-item">\n                    <span>Tag Diversity (${(100 * s.diversityRatio).toFixed(0)}% unique words - ${s.diversityRatio >= .8 ? "Excellent" : s.diversityRatio >= .6 ? "Good" : s.diversityRatio >= .4 ? "Fair" : "Poor"})</span>\n                    <span>${s.diversityScore.toFixed(1)} / 1.0</span>\n                </div>\n            </div>\n            <div style="margin-top: 15px;">\n                <div class="tag-container">\n                    ${tags.map((e => { const t = n.matchingKeywords.some((t => t.toLowerCase() === e.toLowerCase())), s = e.length < 10 && e.split(" ").length < 3; return `<div class="tag ${t ? "highlighted-tag" : s ? "low-quality-tag" : ""}">${e}</div>` })).join("")}\n                </div>\n            </div>\n            ${s.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${s.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, i += `\n        <div class="score-card">\n            <div class="score-header">\n                <h3>Description</h3>\n                <span class="score-value grade-${getGrade(a.score)}">${a.score.toFixed(2)} (${getGrade(a.score)})</span>\n            </div>\n            <div class="score-details">\n                <div class="score-item">\n                    <span>Length (${t.length} characters, ${a.wordCount} words)</span>\n                    <span>${a.lengthScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Formatting (${a.formattingElements.hasListElements ? "Has lists" : "Missing lists"})</span>\n                    <span>${a.formattingScore.toFixed(1)} / 1.2</span>\n                </div>\n                <div class="score-item">\n                    <span>Title Keyword Integration (${Math.round(100 * a.keywordRatio)}% in first 160 chars)</span>\n                    <span>${a.keywordScore.toFixed(1)} / 1.6</span>\n                </div>\n                <div class="score-item">\n                    <span>Missing keywords:</span>\n                    <span style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end">\n                        ${a.keywordsMissing.map((e => `<span class="missing-keyword" style="font-size: 12px; margin: 2px; background-color: #e0e0e0; color: #757575; padding: 2px 6px; border-radius: 12px;">${e}</span>`)).join("")}\n                    </span>\n                </div>\n            </div>\n            ${a.recommendations.length > 0 ? `\n                <div class="recommendations">\n                    <h4>Recommendations</h4>\n                    <ul>\n                        ${a.recommendations.map((e => "string" == typeof e ? `<li>${e}</li>` : `<li>\n                                    ${e.text}\n                                    ${e.pills && e.pills.length > 0 ? `\n                                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">\n                                            ${e.pills.map((e => `<span class="pill-recommendation">${e}</span>`)).join("")}\n                                        </div>\n                                    ` : ""}\n                                </li>`)).join("")}\n                    </ul>\n                </div>\n            ` : ""}\n        </div>\n    `, resultsContainer.innerHTML = i
 }
 
 function calculateTitleScore(e) {
@@ -246,11 +365,16 @@ function calculateTagsScore(e) {
     return t.score = t.tagCountScore + t.multiWordScore + t.qualityScore + t.diversityScore, t
 }
 
-function calculateDescriptionScore(e, t) {
+function calculateDescriptionScore(e, t, focusKeywords) {
     console.log("calculateDescriptionScore called with:", {
         description: e ? e.substring(0, 50) + "..." : "empty",
         title: t ? t.substring(0, 50) + "..." : "empty"
     });
+    
+    // DEBUGGING: Print the exact focus keywords being passed in
+    console.log("FOCUS KEYWORDS PASSED TO FUNCTION:", focusKeywords);
+    console.log("FOCUS KEYWORDS TYPE:", typeof focusKeywords);
+    console.log("IS ARRAY:", Array.isArray(focusKeywords));
     
     const n = {
         score: 0,
@@ -274,6 +398,21 @@ function calculateDescriptionScore(e, t) {
     
     // Calculate length score
     const s = e.length;
+    console.log("SINGLE SCORE TOOL - Description length:", s);
+    console.log("SINGLE SCORE TOOL - First 100 chars:", JSON.stringify(e.substring(0, 100)));
+    console.log("SINGLE SCORE TOOL - Newline count:", (e.match(/\n/g) || []).length);
+    
+    // Add character breakdown for comparison with batch processor
+    const whitespaceCount = (e.match(/\s/g) || []).length;
+    const alphanumCount = (e.match(/[a-zA-Z0-9]/g) || []).length;
+    const punctCount = (e.match(/[.,;:!?'"()[\]{}]/g) || []).length;
+    console.log('SINGLE SCORE TOOL - Character breakdown:', {
+        whitespace: whitespaceCount,
+        alphanumeric: alphanumCount,
+        punctuation: punctCount,
+        other: e.length - whitespaceCount - alphanumCount - punctCount
+    });
+    
     if (s >= 1151) {
         n.lengthScore = 1.2;
     } else if (s >= 787 && s <= 1150) {
@@ -297,9 +436,9 @@ function calculateDescriptionScore(e, t) {
     // Calculate formatting score
     const a = e.split(/\n\s*\n/);
     n.formattingElements.hasParagraphBreaks = a.length > 2 && a.some(section => section.length < 300);
-    n.formattingElements.hasListElements = /(?:^|\n)\s*(?:[\+\-\*•]|(?:\d+[\.\)]|[a-zA-Z][\.\)]))\s+/.test(e) || 
+    n.formattingElements.hasListElements = /(?:^|\n)\s*(?:[\+\-\*•●►]|(?:\d+[\.\)]|[a-zA-Z][\.\)]))\s+/.test(e) || 
                                           /\*\s+\w+/.test(e) || 
-                                          /(?:^|\n)\s*(?:\p{Emoji}|[✓✔☑√➢◦\+])\s+/u.test(e);
+                                          /(?:^|\n)\s*(?:\p{Emoji}|[✓✔☑√➢◦●►\+])\s+/u.test(e);
     n.formattingElements.hasFormatting = /[\*\_\#]|:[\w]+:/.test(e);
     
     if (n.formattingElements.hasListElements) {
@@ -332,12 +471,23 @@ function calculateDescriptionScore(e, t) {
     // Get the first 160 chars of description for keyword checking
     const first160Chars = e.substring(0, 160).toLowerCase();
     
-    // Use tags array for focus keywords instead of extracting from title
-    const tagsArray = Array.isArray(tags) ? [...tags] : [];
+    // DEBUGGING - extra info about tags array
+    console.log("Global tags array:", tags);
     
-    // Check which WHOLE tags exist in the first 160 chars
-    const r = tagsArray.filter(tag => first160Chars.includes(tag.toLowerCase()));
-    const l = tagsArray.filter(tag => !first160Chars.includes(tag.toLowerCase()));
+    // Determine which focus keywords to use - SIMPLER VERSION
+    // Just use what was passed in, with a fallback for safety
+    const tagsArray = Array.isArray(focusKeywords) ? focusKeywords : [];
+    console.log("Final tags array for analysis:", tagsArray);
+    
+    // Use the exact same matching logic as the title focus keywords
+    // Simple substring matches - consistent with how title focus keywords are checked
+    const r = tagsArray.filter(tag => {
+        const tagLower = tag.toLowerCase();
+        return first160Chars.includes(tagLower);
+    });
+    
+    // Words not found get added to missing list
+    const l = tagsArray.filter(tag => !r.includes(tag));
     
     // Set the results and calculate score
     n.keywordsFound = r; 
@@ -363,6 +513,22 @@ function calculateDescriptionScore(e, t) {
 function getGrade(e) {
     return e >= 3.5 ? "A" : e >= 2.5 ? "B" : e >= 1.5 ? "C" : "D"
 }
+// Add a custom function to test description keyword matching with specific focus keywords
+// For quick testing of specific focus keywords with description
+function testDescriptionWithFocusKeywords(description, focusKeywords) {
+    if (!Array.isArray(focusKeywords)) {
+        focusKeywords = focusKeywords.split(',').map(k => k.trim());
+    }
+    
+    console.log(`Testing description with focus keywords: ${focusKeywords.join(', ')}`);
+    const result = calculateDescriptionScore(description, "", focusKeywords);
+    console.log(`Score: ${result.keywordScore.toFixed(1)}/1.6 (${result.keywordsFound.length}/${focusKeywords.length} keywords found)`);
+    console.log(`Found: ${result.keywordsFound.join(', ')}`);
+    console.log(`Missing: ${result.keywordsMissing.join(', ')}`);
+    
+    return result;
+}
+
 // Check if elements exist before adding event listeners
 if (addTagBtn) addTagBtn.addEventListener("click", addTag);
 if (document.getElementById("clearTagsBtn")) document.getElementById("clearTagsBtn").addEventListener("click", (function () {
@@ -391,6 +557,24 @@ if (document.getElementById("copyTagsBtn")) document.getElementById("copyTagsBtn
     console.log("Analyze button clicked");
     const e = titleInput.value.trim(),
         t = descriptionInput.value.trim();
+        
+    // Check for batchDescription in localStorage for comparison
+    try {
+        const batchDescription = localStorage.getItem('batchDescription');
+        if (batchDescription) {
+            console.log('Found batch description in localStorage for comparison');
+            // If we have the comparison function from batch-processor
+            if (typeof analyzeStringDifferences === 'function') {
+                analyzeStringDifferences(batchDescription, t);
+            } else {
+                console.log('COMPARE - Batch length:', batchDescription.length);
+                console.log('COMPARE - Single length:', t.length);
+                console.log('COMPARE - Difference:', batchDescription.length - t.length);
+            }
+        }
+    } catch (e) {
+        console.error('Error comparing descriptions:', e);
+    }
     console.log("Title:", e);
     console.log("Description:", t);
     console.log("Tags:", tags);

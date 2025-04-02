@@ -1,9 +1,11 @@
 # Environment variables
 openai.env
+repomix-output.txt
 node_modules/
 .DS_Store
 old/
 claude.md
-repomix-output.txt
 index-copy.html
 old.zip
+.vscode
+classify.html
