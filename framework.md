@@ -1,0 +1,133 @@
+# Complete Etsy Scoring Framework & Criteria
+
+## Definitions
+- **Separator**: A character or sequence used to divide keywords in a title (comma, pipe " | ", dash " - ")
+- **Focus Keywords**: Important keywords from tags that appear in the title
+- **Multi-word Tag**: A tag containing more than one word (separated by spaces)
+- **Low Quality Tag**: A tag with fewer than 10 characters AND fewer than 3 words
+- **Tag Diversity**: Ratio of unique words to total words across all tags
+
+## Overall Grade Calculation
+Overall score = (Title score × 0.40) + (Tag score × 0.40) + (Description score × 0.20)
+
+### Scoring Scale:
+- **4**: 3.5–4.0 (A-equivalent)
+- **3**: 2.5–3.49 (B-equivalent)
+- **2**: 1.5–2.49 (C-equivalent) 
+- **1**: Below 1.5 (D/F-equivalent)
+
+## Title Scoring (1-4 points)
+
+### Character Count (1.2 points)
+**Definition**: Total number of characters in the title
+
+**Scoring**:
+- 70-140 characters: 1.2 points
+- 50-69 characters: 0.6 points
+- <50 or >140 characters: 0.3 points
+
+### Focus keywords in first 60 Characters (1.2 points)
+**Definition**: Each tag keyword found in the first 60 characters of the title
+
+**Scoring**: 0.3 points per tag keyword (up to 1.2 points)
+
+**Note**: Special handling for characters:
+- Only these specific characters are removed: `, . | : ; " ! ? ( )`
+- All other symbols are preserved, including: apostrophes, hyphens, trademark symbols (™, ©, ®), 
+  currency symbols ($, €, £), math symbols (+, =, %), and international/accented characters
+- This allows for matching international characters, brand names with symbols, etc.
+- Exact matching is used (tag must appear as written in the processed title)
+
+*Updated [04/02/2025]*
+
+### Keyword Redundancy (0.8 points)
+**Definition**: Abnormal repetition of words or phrases
+
+**Scoring**:
+- No words repeated more than twice (0.8 points)
+- Any word repeated 3+ times results in 0 points for this category
+- This is an all-or-nothing score with no partial credit
+
+### Structural Elements (0.8 points)
+**Definition**: Use of separators (commas, pipes " | ", dashes " - ")
+
+**Scoring**: 
+- 2+ separators: 0.8 points
+- 1 separator: 0.4 points
+- 0 separators: 0.2 points
+
+*Updated [03/27/2025]*
+
+## Tag Scoring (1-4 points)
+
+### Tag Count (1.0 point)
+**Definition**: Total number of tags used
+
+**Scoring**: (Number of tags / 13) × 1
+
+### Multi-word Tag Ratio (1.0 point)
+**Definition**: Percentage of tags containing multiple words (separated by spaces)
+
+**Scoring**: (Number of multi-word tags / Total tags)
+- Higher percentage of multi-word tags receives better scores
+
+### Tag Quality (1.0 point)
+**Definition**: Low quality tags: less than 10 characters AND fewer than 3 words
+
+**Scoring**:
+- No low quality tags (1.0 point)
+- Presence of at least 1 low quality tag (0.5 point)
+- More than 1 low quality tag (0.0 points)
+
+### Tag Diversity (1.0 point)
+**Definition**: Measures unique words across all tags
+
+**Scoring**:
+- ≥0.8 (80%) ratio: 1.0 point
+- 0.6-0.79 (60-79%) ratio: 0.8 points
+- 0.4-0.59 (40-59%) ratio: 0.5 points
+- <0.4 ratio (less than 40%): 0.2 points
+
+*Updated [04/02/2025]*
+
+## Description Scoring (1-4)
+On Etsy, product descriptions can be up to 102,400 characters, but the first 160 characters are most visible, so prioritize keywords there.
+
+### Length and Detail (1.2 points)
+**Definition**: Total character count in description
+
+**Scoring**:
+- 1151+ characters: 1.2 points
+- 787-1150 characters: 0.9 points
+- 393-786 characters: 0.6 points
+- 160-392 characters: 0.3 points
+- <160 characters: 0 points
+
+*Updated [04/02/2025]*
+
+### Structural Formatting (1.2 points)
+**Definition**: Use of formatting elements for readability
+
+Presence of any of these list formats:
+- Bullet points (•, ●, ►, *, +)
+- Hyphens at the beginning of a line or after a line break
+- Numbered lists (1., 2., etc.)
+- Lettered lists (a), b), a., b., etc.)
+- Lines starting with "+ " format (e.g., "+ Shipped FAST & FREE")
+- Emoji and symbol list markers (all Unicode emoji and symbols like ✅, ✔, ☑, ✓, ➢, ◦, ●, ►, +, etc.)
+
+*Updated [04/02/2025]*
+
+**Note**: Hyphens within words (e.g., "sister-in-law") are not counted as list formatting
+
+This is an all or nothing score; full points if list elements are present, zero if not
+
+### Keyword Integration (1.6 points)
+**Definition**: Inclusion of focus keywords from title in the first 160 characters of description
+
+**Scoring**: (number of focus keywords found in first 160 chars / total focus keywords from title) × 1.6
+
+Focus keywords are tag keywords that appear in the title
+First 160 characters are prioritized as they're most visible to shoppers
+
+*Updated [04/02/2025]*
