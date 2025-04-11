@@ -37,12 +37,13 @@ No words repeated more than twice (0.8 points)
 Any word repeated 3+ times results in 0 points for this category
 This is an all-or-nothing score with no partial credit
 Structural Elements (0.8 points)
-Definition: Use of separators (commas, pipes " | ", dashes " - ")
+Definition: Use of separators (commas, pipes " | ", dashes " - ") to create clear visual separation between keywords
 Scoring: 
-2+ separators: 0.8 points
-1 separator: 0.4 points
+2+ separators total (any combination): 0.8 points
+1 separator total: 0.4 points
 0 separators: 0.2 points
-Updated [03/27/2025]
+Note: Dashes and pipes count only when they have spaces on both sides (" - ", " | "). This ensures they create clear visual separation for readability. Commas do not require spaces to be counted.
+Updated [04/11/2025]
 
 Tag Scoring (1-4 points)
 Tag Count (1.0 point)

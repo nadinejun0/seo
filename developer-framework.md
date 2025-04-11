@@ -115,6 +115,7 @@ When modifying any algorithm component, consider these impacts:
 2. **Title-Related Changes**:
    - Affects: Title score (direct), Description score (via focus keywords)
    - Example: Changing separator detection affects 20% of Title score (0.8 of 4.0 points)
+   - Note: In the code, this is implemented as `commaScore` but it measures all separator types (commas, pipes, dashes) combined, not just commas
    - Cascading Effect: Title changes that affect focus keywords can impact description scoring
 
 3. **Description-Related Changes**:
@@ -211,7 +212,12 @@ function calculateTitleScore(title) {
   // Focus keyword score - 0.3 points per keyword up to 1.2 max
   const focusKeywordScore = Math.min(matchingKeywords.length * 0.3, 1.2);
   
-  // Remaining calculations for redundancy (0.8) and separators (0.8)
+  // Remaining calculations for redundancy (0.8) and structural elements (0.8)
+  // Note: In the actual code, the structural elements score is named 'commaScore'
+  // even though it counts all separator types (commas, pipes, dashes) combined
+  // Importantly, pipes and dashes only count when they have spaces on both sides (" | ", " - ")
+  // This spacing requirement ensures they create clear visual keyword separation for readability
+  // Commas are counted without requiring spaces
   // ...
   
   // CRITICAL: Must include matchingKeywords in the return object
@@ -443,7 +449,7 @@ Overall Score (4.0 max)
 │   ├── Character Count (30% of Title) - 1.2 pts max
 │   ├── Focus Keywords (30% of Title) - 1.2 pts max
 │   ├── Redundancy (20% of Title) - 0.8 pts max
-│   └── Separators (20% of Title) - 0.8 pts max
+│   └── Structural Elements / Separators (20% of Title) - 0.8 pts max
 ├── Tags Score (40% of total) - 1.6 pts max contribution
 │   ├── Tag Count (25% of Tags) - 1.0 pts max
 │   ├── Multi-word Ratio (25% of Tags) - 1.0 pts max

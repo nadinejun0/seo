@@ -248,8 +248,8 @@ function calculateTitleScore(e) {
         focusKeywordScore: 0,
         repeatedWords: [],
         redundancyScore: 0,
-        commas: 0,
-        commaScore: 0,
+        commas: 0, //despite the variable name, this represents the total count of any of the separator types (pipes [' | '], hyphens [' - '], commas[,]), not just commas. see developer-framework.md:215
+        commaScore: 0, 
         recommendations: [],
         first60Chars: e.substring(0, 60),
         matchingKeywords: []
