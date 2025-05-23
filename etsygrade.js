@@ -138,7 +138,7 @@ function analyzeEtsyListing() {
             });
         }
         
-        // detect paragraph breaks and formatting
+        // detect paragraph breaks and formatting - not factored into the score
         const paragraphs = t.split(/\n\s*\n/);
         a.formattingElements.hasParagraphBreaks = paragraphs.length > 2 && 
             paragraphs.some(section => section.length < 300);
